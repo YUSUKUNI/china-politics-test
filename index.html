@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>中国公共议题立场测试</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Noto Sans SC",sans-serif;background:#080b14;color:#f5f7ff}
+body{display:flex;justify-content:center}
+button{font:inherit;border:0}
+.app{width:100%;max-width:760px;min-height:100vh;padding:24px 20px 40px}
+.screen{display:none;min-height:calc(100vh - 64px)}
+.screen.active{display:flex;flex-direction:column}
+.logo{width:68px;height:68px;border-radius:20px;background:linear-gradient(135deg,#5b7cff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 15px 40px #3948a844;margin-top:42px}
+h1{font-size:34px;line-height:1.18;margin:25px 0 12px;letter-spacing:-1px}
+h2{font-size:27px;line-height:1.3;margin:25px 0 12px}
+.subtitle{color:#aeb6cc;font-size:16px;line-height:1.7}
+.card{background:#111727;border:1px solid #202940;border-radius:24px;padding:22px;margin-top:22px}
+.info{display:flex;gap:12px;margin:12px 0;color:#c7cee0;font-size:14px;line-height:1.6}
+.dot{width:8px;height:8px;border-radius:50%;background:#7185ff;margin-top:7px;flex:none}
+.primary{width:100%;padding:17px;border-radius:16px;background:linear-gradient(135deg,#637cff,#7c5cff);color:white;font-weight:700;font-size:17px;box-shadow:0 12px 30px #586cff35;cursor:pointer}
+.secondary{width:100%;padding:15px;border-radius:15px;background:#171e30;color:#dce2f2;border:1px solid #29334b;font-weight:600;cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;padding-top:15px}
+.stage{font-size:13px;color:#8e9abb}
+.counter{font-size:13px;color:#8e9abb}
+.progress{height:5px;background:#1b2233;border-radius:10px;margin:15px 0 32px;overflow:hidden}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#627cff,#9b6cff);border-radius:10px;transition:width .45s ease}
+.question-card{margin-top:0;background:#111727;border:1px solid #202940;border-radius:25px;padding:25px 20px}
+.question-num{font-size:13px;color:#7784a4;margin-bottom:14px}
+.question{font-size:24px;line-height:1.45;font-weight:700;letter-spacing:-.3px}
+.options{display:grid;gap:11px;margin-top:25px}
+.option{padding:16px 15px;border-radius:15px;background:#171e30;border:1px solid #29334a;color:#e9edf8;text-align:left;cursor:pointer;transition:.18s}
+.option:active{transform:scale(.98)}
+.option.selected{border-color:#7185ff;background:#273153;box-shadow:0 0 0 1px #7185ff inset}
+.opt-title{font-weight:700;font-size:15px}
+.opt-desc{font-size:12px;color:#8e99b2;margin-top:4px}
+.nav{display:flex;gap:10px;margin-top:16px}
+.nav button{flex:1}
+.disabled{opacity:.35;pointer-events:none}
+.result-title{text-align:center;margin-top:25px}
+.result-sub{text-align:center;color:#aeb6cc;line-height:1.6}
+.chart-wrap{position:relative;width:min(100%,500px);margin:15px auto}
+canvas{width:100%;height:auto;display:block}
+.scores{display:grid;gap:10px;margin-top:12px}
+.score-row{display:flex;align-items:center;gap:10px;background:#111727;border:1px solid #202940;padding:12px 14px;border-radius:14px}
+.score-name{width:92px;font-size:13px;color:#cfd5e5}
+.bar{height:7px;flex:1;background:#222a3e;border-radius:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#627cff,#a26bff);border-radius:10px}
+.score-num{font-size:12px;color:#8793b0;width:36px;text-align:right}
+.note{font-size:12px;color:#7f8aa4;line-height:1.6;margin-top:20px}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.small-title{font-size:14px;color:#8e9abb;margin-bottom:8px}
+@media(max-width:500px){
+h1{font-size:30px}.question{font-size:21px}.app{padding:18px 16px 30px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<section id="start" class="screen active">
+  <div class="logo">◈</div>
+  <h1>中国公共议题<br>立场测试</h1>
+  <div class="subtitle">
+    通过 30 个公共议题问题，记录你对财政、社会制度、税收、政治制度、民族文化与地缘外交等议题的回答。
+  </div>
+
+  <div class="card">
+    <div class="info"><span class="dot"></span><span>共 6 个阶段、30 道题，每题一页。</span></div>
+    <div class="info"><span class="dot"></span><span>每题有五种回答：很支持、一般支持、中立、一般不支持、很不支持。</span></div>
+    <div class="info"><span class="dot"></span><span>结果页仅根据你的回答生成统计图，不对你的立场作价值判断。</span></div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:25px">
+    <button class="primary" onclick="startTest()">开始测试</button>
+  </div>
+</section>
+
+<section id="quiz" class="screen">
+  <div class="top">
+    <div class="stage" id="stageName"></div>
+    <div class="counter" id="counter"></div>
+  </div>
+  <div class="progress"><i id="progress"></i></div>
+
+  <div id="questionBox" class="question-card fade">
+    <div class="question-num" id="qnum"></div>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <div class="nav">
+    <button class="secondary" id="backBtn" onclick="prevQuestion()">上一题</button>
+    <button class="primary disabled" id="nextBtn" onclick="nextQuestion()">下一题</button>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="result-title">
+    <div class="small-title">测试完成</div>
+    <h1>你的回答分布</h1>
+    <div class="result-sub">以下图表按照六个阶段分别统计你的回答倾向。</div>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap"><canvas id="radar" width="600" height="600"></canvas></div>
+  </div>
+
+  <div class="scores" id="scores"></div>
+
+  <div class="card">
+    <div class="small-title">回答说明</div>
+    <div class="note">
+      每题按照「很支持 → 一般支持 → 中立 → 一般不支持 → 很不支持」记录为五档。
+      图表仅呈现你的回答数据，不代表任何政治人物、政党或政策的评价，也不会判断哪一种立场“正确”。
+    </div>
+  </div>
+
+  <div style="display:grid;gap:10px;margin-top:18px">
+    <button class="primary" onclick="shareResult()">分享结果</button>
+    <button class="secondary" onclick="restart()">重新测试</button>
+  </div>
+</section>
+
+</div>
+
+<script>
+const stages=[
+{
+ name:"第一阶段：财政问题",
+ qs:[
+ "你是否支持保护房价",
+ "你是否支持继续大基建拉动经济",
+ "你是否支持设立最低工资",
+ "你是否支持个人购置城市土地建房子",
+ "你是否支持每人每年一个固定数额的医保和退休金制度支出"
+ ]},
+{
+ name:"第二阶段：社会制度",
+ qs:[
+ "你是否支持取消户口自由迁徙",
+ "你是否支持婚前财产不会因为离婚分割",
+ "你是否支持设立保护同性伴侣同等民事权利的制度",
+ "你是否支持犯罪记录公开（服刑过后依然有标签）",
+ "你是否支持身份证上划分各民族"
+ ]},
+{
+ name:"第三阶段：税收",
+ qs:[
+ "你是否支持购买商品时标注消费税数额",
+ "你是否支持设立房产税",
+ "你是否支持下调个人所得税起征点",
+ "你是否支持设立遗产税",
+ "你是否支持增加企业所得税"
+ ]},
+{
+ name:"第四阶段：政治制度",
+ qs:[
+ "你是否支持多党制",
+ "你是否支持自由结社权利以及宗教信仰自由",
+ "你是否支持报社新闻媒体自由",
+ "你是否支持互联网城墙",
+ "你是否支持民选产生官员"
+ ]},
+{
+ name:"第五阶段：民族文化",
+ qs:[
+ "你是否支持中华文化是以汉族文化为主导的",
+ "你是否支持对少数民族地区推行汉化政策",
+ "你是否支持保护少数民族文化语言的专项政策（包括地方方言）",
+ "你是否支持过洋节",
+ "你是否支持设立一门外语作为义务教育主课"
+ ]},
+{
+ name:"第六阶段：地缘外交",
+ qs:[
+ "你是否支持海峡两岸一个中国各自表述",
+ "你是否支持俄罗斯入侵乌克兰",
+ "你是否支持美国进攻伊朗",
+ "你是否支持哈马斯进攻以色列",
+ "你是否支持如果有可能，尝试恢复部分外东北、外西北，甚至蒙古地区"
+ ]}
+];
+
+const options=[
+ ["很支持",2],
+ ["一般支持",1],
+ ["中立",0],
+ ["一般不支持",-1],
+ ["很不支持",-2]
+];
+
+let questions=[];
+stages.forEach((s,si)=>s.qs.forEach((q,qi)=>questions.push({
+ stage:si,qIndex:qi,text:q
+})));
+
+let answers=Array(questions.length).fill(null);
+let current=0;
+
+function show(id){
+ document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ window.scrollTo(0,0);
+}
+
+function startTest(){
+ current=0;
+ answers.fill(null);
+ show("quiz");
+ renderQuestion();
+}
+
+function renderQuestion(){
+ const q=questions[current];
+ const s=stages[q.stage];
+
+ document.getElementById("stageName").textContent=s.name;
+ document.getElementById("counter").textContent=(current+1)+" / "+questions.length;
+ document.getElementById("qnum").textContent="问题 "+(current+1);
+ document.getElementById("question").textContent=q.text;
+ document.getElementById("progress").style.width=((current+1)/questions.length*100)+"%";
+
+ const box=document.getElementById("questionBox");
+ box.classList.remove("fade");
+ void box.offsetWidth;
+ box.classList.add("fade");
+
+ const list=document.getElementById("options");
+ list.innerHTML="";
+
+ options.forEach((o,i)=>{
+   const b=document.createElement("button");
+   b.className="option"+(answers[current]===o[1]?" selected":"");
+   b.innerHTML='<div class="opt-title">'+o[0]+'</div>';
+   b.onclick=()=>selectAnswer(o[1],b);
+   list.appendChild(b);
+ });
+
+ document.getElementById("backBtn").classList.toggle("disabled",current===0);
+ document.getElementById("nextBtn").classList.toggle("disabled",answers[current]===null);
+ document.getElementById("nextBtn").textContent=current===questions.length-1?"查看结果":"下一题";
+}
+
+function selectAnswer(value,button){
+ answers[current]=value;
+ document.querySelectorAll(".option").forEach(x=>x.classList.remove("selected"));
+ button.classList.add("selected");
+ document.getElementById("nextBtn").classList.remove("disabled");
+}
+
+function prevQuestion(){
+ if(current>0){current--;renderQuestion();}
+}
+
+function nextQuestion(){
+ if(answers[current]===null)return;
+ if(current<questions.length-1){
+   current++;
+   renderQuestion();
+ }else{
+   showResult();
+ }
+}
+
+function stageScores(){
+ return stages.map((s,si)=>{
+   const vals=questions.map((q,i)=>q.stage===si?answers[i]:null).filter(v=>v!==null);
+   return vals.reduce((a,b)=>a+b,0)/(vals.length||1);
+ });
+}
+
+function showResult(){
+ show("result");
+ drawRadar();
+}
+
+function drawRadar(){
+ const canvas=document.getElementById("radar");
+ const ctx=canvas.getContext("2d");
+ const w=canvas.width,h=canvas.height;
+ ctx.clearRect(0,0,w,h);
+
+ const cx=w/2,cy=h/2,r=210;
+ const scores=stageScores();
+ const n=6;
+
+ ctx.lineWidth=2;
+ ctx.strokeStyle="#28324a";
+ for(let ring=1;ring<=5;ring++){
+   ctx.beginPath();
+   for(let i=0;i<n;i++){
+     const a=-Math.PI/2+i*2*Math.PI/n;
+     const rr=r*ring/5;
+     const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+     i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+   }
+   ctx.closePath();ctx.stroke();
+ }
+
+ for(let i=0;i<n;i++){
+   const a=-Math.PI/2+i*2*Math.PI/n;
+   ctx.beginPath();ctx.moveTo(cx,cy);
+   ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+   ctx.stroke();
+ }
+
+ const pts=scores.map((v,i)=>{
+   const a=-Math.PI/2+i*2*Math.PI/n;
+   const rr=r*(v+2)/4;
+   return [cx+Math.cos(a)*rr,cy+Math.sin(a)*rr];
+ });
+
+ ctx.beginPath();
+ pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+ ctx.closePath();
+ ctx.fillStyle="rgba(103,124,255,.22)";
+ ctx.fill();
+ ctx.strokeStyle="#7185ff";
+ ctx.lineWidth=4;
+ ctx.stroke();
+
+ pts.forEach(p=>{
+   ctx.beginPath();ctx.arc(p[0],p[1],7,0,Math.PI*2);
+   ctx.fillStyle="#8c9aff";ctx.fill();
+ });
+
+ ctx.fillStyle="#cbd3e7";
+ ctx.font="bold 17px -apple-system,BlinkMacSystemFont,sans-serif";
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+
+ stages.forEach((s,i)=>{
+   const a=-Math.PI/2+i*2*Math.PI/n;
+   const rr=r+55;
+   const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+   const label=s.name.replace("第一阶段：","财政").replace("第二阶段：","社会").replace("第三阶段：","税收").replace("第四阶段：","政治").replace("第五阶段：","文化").replace("第六阶段：","外交");
+   ctx.fillText(label,x,y);
+ });
+
+ const scoresBox=document.getElementById("scores");
+ scoresBox.innerHTML="";
+ stages.forEach((s,i)=>{
+   const v=scores[i];
+   const pct=(v+2)/4*100;
+   const row=document.createElement("div");
+   row.className="score-row";
+   row.innerHTML='<div class="score-name">'+
+     s.name.split("：")[1]+
+     '</div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="score-num">'+
+     (v>0?"+":"")+v.toFixed(1)+'</div>';
+   scoresBox.appendChild(row);
+ });
+}
+
+function shareResult(){
+ const scores=stageScores();
+ const text="中国公共议题立场测试｜我的六阶段回答分布\n"+
+ stages.map((s,i)=>s.name.split("：")[1]+"："+(scores[i]>0?"+":"")+scores[i].toFixed(1)).join("\n");
+
+ if(navigator.share){
+   navigator.share({title:"中国公共议题立场测试",text}).catch(()=>{});
+ }else if(navigator.clipboard){
+   navigator.clipboard.writeText(text).then(()=>alert("结果已经复制，可以粘贴分享。"));
+ }else{
+   prompt("复制下面的结果：",text);
+ }
+}
+
+function restart(){
+ startTest();
+}
+</script>
+</body>
+</html>
