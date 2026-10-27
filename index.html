@@ -2,1008 +2,686 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>中国政治议题测试</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国政治立场测试</title>
 <style>
-*{
-  box-sizing:border-box;
+:root {
+  --bg-color: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --border: #e2e8f0;
+  --color-blue: #3b82f6;
+  --color-green: #10b981;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
 }
 
-body{
-  margin:0;
-  background:#0f1117;
-  color:#f2f4f8;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
-  "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-.container{
-  width:min(760px,92%);
-  margin:0 auto;
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  padding:30px 0;
+html {
+  scroll-behavior: smooth;
 }
 
-.card{
-  background:#181b23;
-  border:1px solid #292e3a;
-  border-radius:20px;
-  padding:30px;
-  box-shadow:0 12px 40px rgba(0,0,0,.25);
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.6;
+  padding: 32px 16px 24px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
-h1{
-  font-size:30px;
-  margin:0 0 14px;
+button {
+  font: inherit;
 }
 
-h2{
-  font-size:24px;
-  line-height:1.5;
+button:focus-visible {
+  outline: 3px solid #bfdbfe;
+  outline-offset: 2px;
 }
 
-p{
-  color:#b7bdc9;
-  line-height:1.8;
+.container {
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
 }
 
-button{
-  border:0;
-  border-radius:12px;
-  padding:14px 20px;
-  font-size:16px;
-  cursor:pointer;
+header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
-.primary{
-  width:100%;
-  background:#f2f4f8;
-  color:#111;
-  font-weight:700;
-  margin-top:18px;
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
 }
 
-.option{
-  display:block;
-  width:100%;
-  text-align:left;
-  background:#20242e;
-  color:#f2f4f8;
-  border:1px solid #303643;
-  margin:10px 0;
-  transition:.15s;
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
-.option:hover{
-  background:#292e39;
+.header-meta {
+  margin-top: 6px;
+  font-size: 0.88rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
-.option.selected{
-  background:#394150;
-  border-color:#8e98aa;
+.header-meta span {
+  color: var(--primary);
+  font-weight: 700;
 }
 
-.hidden{
-  display:none!important;
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
+  margin-bottom: 20px;
 }
 
-.progress-wrap{
-  margin-bottom:25px;
+.intro-title {
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+  color: #0f172a;
 }
 
-.progress-info{
-  display:flex;
-  justify-content:space-between;
-  color:#9da5b4;
-  font-size:14px;
-  margin-bottom:8px;
+.intro-copy {
+  font-size: 0.95rem;
+  color: #334155;
 }
 
-.progress{
-  height:7px;
-  background:#272c36;
-  border-radius:20px;
-  overflow:hidden;
+.instruction-list {
+  margin: 16px 0 24px 20px;
+  color: #334155;
+  font-size: 0.95rem;
 }
 
-.progress-bar{
-  height:100%;
-  width:0;
-  background:#f2f4f8;
-  transition:.3s;
+.instruction-list li {
+  margin-bottom: 8px;
 }
 
-.question-number{
-  color:#9da5b4;
-  font-size:14px;
-  margin-bottom:8px;
+.instruction-list li::marker {
+  color: var(--primary);
 }
 
-.nav{
-  display:flex;
-  gap:10px;
-  margin-top:22px;
+.btn-primary {
+  display: block;
+  width: 100%;
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  padding: 14px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  text-align: center;
 }
 
-.nav button{
-  flex:1;
+.btn-primary:hover {
+  background: var(--primary-hover);
 }
 
-.secondary{
-  background:#272c36;
-  color:#f2f4f8;
+.btn-primary:active {
+  transform: translateY(1px);
 }
 
-.result-title{
-  margin-bottom:8px;
+.progress-bar-container {
+  background: #e2e8f0;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
 }
 
-.axis{
-  margin:27px 0;
+.progress-bar {
+  background: var(--primary);
+  height: 100%;
+  width: 0%;
+  transition: width 0.25s ease;
 }
 
-.axis-title{
-  font-size:17px;
-  font-weight:700;
-  margin-bottom:9px;
+.progress-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
 }
 
-.axis-labels{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  font-size:13px;
-  color:#aeb5c2;
-  margin-bottom:7px;
+.question-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 12px;
 }
 
-.axis-line{
-  height:9px;
-  background:#2b303b;
-  border-radius:10px;
-  position:relative;
+.question-text {
+  font-size: 1.05rem;
+  color: #1e293b;
+  margin-bottom: 22px;
+  line-height: 1.7;
+  background: #f1f5f9;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary);
 }
 
-.axis-mid{
-  position:absolute;
-  left:50%;
-  top:-5px;
-  width:1px;
-  height:19px;
-  background:#646c7b;
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.axis-dot{
-  position:absolute;
-  top:50%;
-  transform:translate(-50%,-50%);
-  width:19px;
-  height:19px;
-  border-radius:50%;
-  background:#fff;
-  border:3px solid #11151c;
-  box-shadow:0 0 0 2px #fff;
+.option-btn {
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  padding: 14px 20px;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  font-weight: 500;
+  color: #1e293b;
 }
 
-.axis-score{
-  text-align:center;
-  color:#9da5b4;
-  font-size:12px;
-  margin-top:7px;
+.option-btn:hover {
+  border-color: var(--primary);
+  background: #f8faff;
 }
 
-.note{
-  background:#20242d;
-  border-radius:12px;
-  padding:15px;
-  color:#aeb5c2;
-  font-size:13px;
-  line-height:1.7;
-  margin-top:25px;
+.option-btn.selected {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  font-weight: 600;
 }
 
-.actions{
-  display:flex;
-  gap:10px;
-  margin-top:25px;
+.nav-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.actions button{
-  flex:1;
+.btn-secondary {
+  background: #e2e8f0;
+  color: #334155;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-@media(max-width:600px){
-  .container{
-    width:94%;
-    padding:15px 0;
+.btn-secondary:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.result-section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.result-lead {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+}
+
+.axis-item {
+  margin-bottom: 20px;
+}
+
+.axis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  gap: 12px;
+}
+
+.axis-score {
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.axis-score.pos {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.axis-score.neg {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.axis-score.mid {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.bipolar-wrapper {
+  position: relative;
+  background: #e2e8f0;
+  height: 14px;
+  border-radius: 7px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.bipolar-center-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #94a3b8;
+  z-index: 2;
+}
+
+.bipolar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  transition: width 0.5s ease;
+}
+
+.bipolar-fill.pos {
+  left: 50%;
+  background: var(--color-green);
+}
+
+.bipolar-fill.neg {
+  right: 50%;
+  background: var(--color-blue);
+}
+
+.bipolar-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.bipolar-labels span {
+  flex: 1;
+}
+
+.bipolar-labels span:nth-child(2) {
+  text-align: center;
+}
+
+.bipolar-labels span:last-child {
+  text-align: right;
+}
+
+.bipolar-labels .active.neg {
+  color: var(--color-blue);
+  font-weight: 700;
+}
+
+.bipolar-labels .active.pos {
+  color: var(--color-green);
+  font-weight: 700;
+}
+
+.axis-mid {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.result-actions {
+  margin-top: 30px;
+  text-align: center;
+}
+
+footer {
+  text-align: center;
+  padding: 18px 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+}
+
+.hide {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 20px 8px 16px;
   }
 
-  .card{
-    padding:22px 17px;
-    border-radius:16px;
+  .card {
+    padding: 20px 16px;
   }
 
-  h1{
-    font-size:25px;
+  h1 {
+    font-size: 1.45rem;
   }
 
-  h2{
-    font-size:20px;
+  .question-text {
+    font-size: 0.98rem;
   }
 
-  .axis-labels{
-    font-size:11px;
+  .result-section-title {
+    align-items: flex-start;
+    font-size: 1.12rem;
+  }
+
+  .bipolar-labels {
+    font-size: 0.76rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 </style>
 </head>
-
 <body>
-
 <div class="container">
+  <header>
+    <h1>中国政治立场测试</h1>
+    <div class="subtitle">30 题情景版</div>
+    <div class="header-meta">八维坐标 · <span>即时生成结果</span></div>
+  </header>
 
-  <!-- START -->
-  <div id="startScreen" class="card">
-    <h1>中国政治议题测试</h1>
-
-    <p>
-      本测试通过一系列公共政策、社会制度、政治制度、
-      民族文化及外交议题，呈现你的议题倾向。
+  <div id="intro-screen" class="card">
+    <h2 class="intro-title">测试须知</h2>
+    <p class="intro-copy">
+      本测试通过 30 道关于财政、社会、税收、政治、文化与外交的选择题，计算你在八个坐标轴上的相对位置。结果仅用于本测试设定下的参考，不代表价值判断。
     </p>
-
-    <p>
-      测试结果仅表示你在本测试所选议题上的回答分布，
-      不代表任何政党、政治人物或现实政治立场。
-    </p>
-
-    <button class="primary" id="startBtn">开始测试</button>
+    <ul class="instruction-list">
+      <li><strong>题目数量</strong>：共 30 道情景命题。</li>
+      <li><strong>作答方式</strong>：每题根据第一直觉，在 5 个选项中选择最符合你想法的一项。</li>
+      <li><strong>结果呈现</strong>：展示你在 8 个维度上的坐标位置，并给出对应方向的相对倾向。</li>
+    </ul>
+    <button type="button" class="btn-primary" onclick="startTest()">开始测试</button>
   </div>
 
-  <!-- QUIZ -->
-  <div id="quizScreen" class="card hidden">
-
-    <div class="progress-wrap">
-      <div class="progress-info">
-        <span id="sectionName"></span>
-        <span id="progressText"></span>
-      </div>
-
-      <div class="progress">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
+  <div id="question-screen" class="card hide">
+    <div class="progress-bar-container">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div class="progress-text">
+      <span id="q-counter">第 1 / 30 题</span>
+      <span id="q-percent">3%</span>
     </div>
 
-    <div class="question-number" id="questionNumber"></div>
+    <div id="q-title" class="question-title">题目加载中...</div>
+    <div id="q-text" class="question-text">题干加载中...</div>
 
-    <h2 id="questionText"></h2>
+    <div id="options-container" class="options-container"></div>
 
-    <div id="options"></div>
-
-    <div class="nav">
-      <button class="secondary" id="prevBtn">上一题</button>
-      <button class="primary" id="nextBtn">下一题</button>
+    <div class="nav-actions">
+      <button type="button" id="prev-btn" class="btn-secondary" onclick="prevQuestion()" disabled>← 上一题</button>
+      <button type="button" id="next-btn" class="btn-secondary" onclick="nextQuestion()">下一题 →</button>
     </div>
-
   </div>
 
-  <!-- RESULT -->
-  <div id="resultScreen" class="card hidden">
-
-    <h1 class="result-title">你的测试结果</h1>
-
-    <p>
-      以下结果是根据你对各问题的回答计算出的八个独立维度。
-      每条轴只计算与该维度相关的问题。
-    </p>
-
-    <div id="results"></div>
-
-    <div class="note">
-      <strong>如何理解结果？</strong><br><br>
-      每条轴的左右两端只是两个相反的政策取向。
-      位置越靠近某一侧，表示你的回答在本测试所选议题中
-      更接近该方向。不同维度彼此独立，例如“大政府”
-      并不意味着一定倾向“权力集中”。
+  <div id="result-screen" class="card hide">
+    <div class="result-section-title">
+      <span>你的八维坐标分布</span>
+      <button type="button" class="btn-secondary" onclick="startTest()" style="font-size:0.8rem; padding:4px 12px;">重新测试</button>
     </div>
 
-    <div class="actions">
-      <button class="secondary" id="shareBtn">分享结果</button>
-      <button class="primary" id="restartBtn">重新测试</button>
-    </div>
+    <p class="result-lead">左右方向只是本测试设定的坐标方向，不代表好坏。点越靠近哪一侧，表示在本测试的设定下越接近该方向。</p>
 
+    <div id="axes-results"></div>
+
+    <div class="result-actions">
+      <button type="button" class="btn-primary" onclick="startTest()">重新作答</button>
+    </div>
   </div>
 
+  <footer>中国政治立场测试 · 结果仅表示本测试设定下的相对位置</footer>
 </div>
 
 <script>
+const questions=[
+{section:"财政问题",text:"你是否支持保护房价",effects:{government:1,income:.8}},
+{section:"财政问题",text:"你是否支持继续大基建拉动经济",effects:{government:1,income:1}},
+{section:"财政问题",text:"你是否支持设立最低工资",effects:{government:1,income:1}},
+{section:"财政问题",text:"你是否支持个人购置城市土地建房子",effects:{government:-.5,income:.7}},
+{section:"财政问题",text:"你是否支持每人每年一个固定数额的医保和退休金制度支出",effects:{government:1,income:1}},
+{section:"社会制度",text:"你是否支持取消户口自由迁徙限制？",effects:{government:-1,income:1}},
+{section:"社会制度",text:"你是否支持婚前财产在离婚时进行分割？",effects:{social:1,income:1}},
+{section:"社会制度",text:"你是否支持设立保护同性伴侣同等民事权利的制度",effects:{social:1}},
+{section:"社会制度",text:"你是否支持犯罪记录公开（服刑过后依然有标签）",effects:{social:-1}},
+{section:"社会制度",text:"你是否支持身份证上划分各民族",effects:{han:.5}},
+{section:"税收",text:"你是否支持购买商品时标注消费税数额",effects:{government:.2}},
+{section:"税收",text:"你是否支持设立房产税",effects:{government:1,income:1}},
+{section:"税收",text:"你是否支持下调个人所得税起征点",effects:{government:1,income:1}},
+{section:"税收",text:"你是否支持设立遗产税",effects:{government:1,income:1}},
+{section:"税收",text:"你是否支持增加企业所得税",effects:{government:1,income:1}},
+{section:"政治制度",text:"你是否支持多党制",effects:{political:1}},
+{section:"政治制度",text:"你是否支持自由结社权利以及宗教信仰自由",effects:{political:1}},
+{section:"政治制度",text:"你是否支持报社新闻媒体自由",effects:{political:1}},
+{section:"政治制度",text:"你是否支持互联网城墙",effects:{political:-1}},
+{section:"政治制度",text:"你是否支持民选产生官员",effects:{political:1}},
+{section:"民族文化",text:"你是否支持中华文化是以汉族文化为主导的",effects:{han:-2,culture:-1}},
+{section:"民族文化",text:"你是否支持对少数民族地区推行汉化政策",effects:{han:-1,culture:-1}},
+{section:"民族文化",text:"你是否支持保护少数民族文化语言的专项政策（包括地方方言）",effects:{han:.5,culture:1}},
+{section:"民族文化",text:"你是否支持过洋节",effects:{culture:1,west:-1}},
+{section:"民族文化",text:"你是否支持设立一门外语作为义务教育主课",effects:{culture:1,west:-1}},
+{section:"地缘外交",text:"关于台湾问题，你是否支持维持现状、坚持一个中国各自表述，而不以武力解决？",effects:{peace:-1,west:-.5}},
+{section:"地缘外交",text:"你是否支持俄罗斯入侵乌克兰",effects:{peace:1,west:2}},
+{section:"地缘外交",text:"你是否支持美国进攻伊朗",effects:{peace:1,west:-2}},
+{section:"地缘外交",text:"你是否支持哈马斯进攻以色列",effects:{peace:1,west:2}},
+{section:"地缘外交",text:"你是否支持如果有可能，尝试恢复部分外东北、外西北，甚至蒙古地区",effects:{peace:1,han:-.5,west:-.5}}
+];
 
-/* =========================
-   题目
-========================= */
+const axes=[
+{key:"government",name:"政府规模",left:"小政府",right:"大政府"},
+{key:"income",name:"经济分配",left:"偏高收入",right:"偏低收入"},
+{key:"social",name:"社会价值",left:"社会保守",right:"社会自由"},
+{key:"political",name:"政治制度",left:"权力集中",right:"政治开放"},
+{key:"han",name:"民族文化",left:"多元文化",right:"大汉族主义",invert:true},
+{key:"culture",name:"文化取向",left:"文化保守",right:"文化开放"},
+{key:"peace",name:"外交军事",left:"武力主义",right:"和平主义",invert:true},
+{key:"west",name:"国际取向",left:"反欧美中心",right:"亲欧美",invert:true}
+];
 
-const questions = [
+const options=[["很支持",2],["一般支持",1],["中立",0],["一般不支持",-1],["很不支持",-2]];
+const screens={
+  intro:document.getElementById("intro-screen"),
+  question:document.getElementById("question-screen"),
+  result:document.getElementById("result-screen")
+};
 
-/* 财政问题 */
-{
- section:"财政问题",
- text:"你是否支持保护房价？",
- effects:{
-   government:1,
-   income:0.8
- }
-},
+let currentIndex=0;
+let selectedAnswers=new Array(questions.length).fill(null);
+let advanceTimer=null;
 
-{
- section:"财政问题",
- text:"你是否支持继续大基建拉动经济？",
- effects:{
-   government:1,
-   income:0.6
- }
-},
+document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>
+  `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">${option[0]}</button>`
+).join("");
 
-{
- section:"财政问题",
- text:"你是否支持设立最低工资？",
- effects:{
-   government:1,
-   income:1
- }
-},
-
-{
- section:"财政问题",
- text:"你是否支持个人购置城市土地建房子？",
- effects:{
-   government:-0.5,
-   income:0.7
- }
-},
-
-{
- section:"财政问题",
- text:"你是否支持每人每年一个固定数额的医保和退休金制度支出？",
- effects:{
-   government:1,
-   income:1
- }
-},
-
-/* 社会制度 */
-{
- section:"社会制度",
- text:"你是否支持取消户口自由迁徙限制？",
- effects:{
-   government:-1,
-   income:1
- }
-},
-
-{
- section:"社会制度",
- text:"你是否支持婚前财产不会因为离婚而分割？",
- effects:{
-   income:-1
- }
-},
-
-{
- section:"社会制度",
- text:"你是否支持设立保护同性伴侣同等民事权利的制度？",
- effects:{
-   social:1
- }
-},
-
-{
- section:"社会制度",
- text:"你是否支持犯罪记录公开，服刑过后依然保留相关标签？",
- effects:{
-   social:-1
- }
-},
-
-{
- section:"社会制度",
- text:"你是否支持身份证上划分各民族？",
- effects:{
-   han:-0.8
- }
-},
-
-/* 税收 */
-{
- section:"税收",
- text:"你是否支持购买商品时标注消费税数额？",
- effects:{
-   government:0.2
- }
-},
-
-{
- section:"税收",
- text:"你是否支持设立房产税？",
- effects:{
-   government:0.7,
-   income:1
- }
-},
-
-{
- section:"税收",
- text:"你是否支持下调个人所得税起征点？",
- effects:{
-   government:0.7,
-   income:1
- }
-},
-
-{
- section:"税收",
- text:"你是否支持设立遗产税？",
- effects:{
-   government:0.7,
-   income:1
- }
-},
-
-{
- section:"税收",
- text:"你是否支持增加企业所得税？",
- effects:{
-   government:0.7,
-   income:1
- }
-},
-
-/* 政治制度 */
-{
- section:"政治制度",
- text:"你是否支持多党制？",
- effects:{
-   political:1
- }
-},
-
-{
- section:"政治制度",
- text:"你是否支持自由结社权利以及宗教信仰自由？",
- effects:{
-   political:1
- }
-},
-
-{
- section:"政治制度",
- text:"你是否支持报社新闻媒体自由？",
- effects:{
-   political:1
- }
-},
-
-{
- section:"政治制度",
- text:"你是否支持互联网城墙？",
- effects:{
-   political:-1
- }
-},
-
-{
- section:"政治制度",
- text:"你是否支持民选产生官员？",
- effects:{
-   political:1
- }
-},
-
-/* 民族文化 */
-{
- section:"民族文化",
- text:"你是否支持中华文化是以汉族文化为主导的？",
- effects:{
-   han:1,
-   culture:-0.5
- }
-},
-
-{
- section:"民族文化",
- text:"你是否支持对少数民族地区推行汉化政策？",
- effects:{
-   han:1,
-   culture:-0.7
- }
-},
-
-{
- section:"民族文化",
- text:"你是否支持保护少数民族文化语言的专项政策，包括地方方言？",
- effects:{
-   han:-1,
-   culture:1
- }
-},
-
-{
- section:"民族文化",
- text:"你是否支持过洋节？",
- effects:{
-   culture:1,
-   west:1
- }
-},
-
-{
- section:"民族文化",
- text:"你是否支持设立一门外语作为义务教育主课？",
- effects:{
-   culture:1,
-   west:1
- }
-},
-
-/* 外交 */
-{
- section:"地缘外交",
- text:"关于台湾问题，你是否支持维持现状、坚持一个中国各自表述，而不以武力解决？",
- effects:{
-   peace:1,
-   west:0.5
- }
-},
-
-{
- section:"地缘外交",
- text:"你是否支持俄罗斯入侵乌克兰？",
- effects:{
-   peace:-1,
-   west:-2
- }
-},
-
-{
- section:"地缘外交",
- text:"你是否支持美国进攻伊朗？",
- effects:{
-   peace:-1,
-   west:2
- }
-},
-
-{
- section:"地缘外交",
- text:"你是否支持哈马斯进攻以色列？",
- effects:{
-   peace:-1,
-   west:-2
- }
-},
-
-{
- section:"地缘外交",
- text:"如果有可能，你是否支持尝试恢复部分外东北、外西北，甚至蒙古地区？",
- effects:{
-   peace:-1,
-   han:1,
-   west:0.5
- }
+function showScreen(name){
+  Object.entries(screens).forEach(([key,screen])=>screen.classList.toggle("hide",key!==name));
 }
 
-];
-
-
-/* =========================
-   轴定义
-========================= */
-
-const axes = [
-
-{
- key:"government",
- title:"政府规模",
- left:"小政府",
- right:"大政府"
-},
-
-{
- key:"income",
- title:"经济分配",
- left:"偏高收入",
- right:"偏低收入"
-},
-
-{
- key:"social",
- title:"社会价值",
- left:"社会保守",
- right:"社会自由"
-},
-
-{
- key:"political",
- title:"政治制度",
- left:"权力集中",
- right:"政治开放"
-},
-
-{
- key:"han",
- title:"民族文化",
- left:"大汉族主义",
- right:"多元文化"
-},
-
-{
- key:"culture",
- title:"文化取向",
- left:"文化保守",
- right:"文化开放"
-},
-
-{
- key:"peace",
- title:"外交军事",
- left:"和平主义",
- right:"武力主义"
-},
-
-{
- key:"west",
- title:"国际取向",
- left:"亲欧美",
- right:"反欧美中心"
+function startTest(){
+  clearTimeout(advanceTimer);
+  currentIndex=0;
+  selectedAnswers=new Array(questions.length).fill(null);
+  showScreen("question");
+  renderQuestion();
+  window.scrollTo({top:0,behavior:"smooth"});
 }
-
-];
-
-
-/* =========================
-   状态
-========================= */
-
-let current = 0;
-let answers = new Array(questions.length).fill(null);
-
-
-/* =========================
-   DOM
-========================= */
-
-const startScreen = document.getElementById("startScreen");
-const quizScreen = document.getElementById("quizScreen");
-const resultScreen = document.getElementById("resultScreen");
-
-const startBtn = document.getElementById("startBtn");
-const nextBtn = document.getElementById("nextBtn");
-const prevBtn = document.getElementById("prevBtn");
-
-const questionText = document.getElementById("questionText");
-const questionNumber = document.getElementById("questionNumber");
-const sectionName = document.getElementById("sectionName");
-const optionsBox = document.getElementById("options");
-
-const progressBar = document.getElementById("progressBar");
-const progressText = document.getElementById("progressText");
-
-const resultsBox = document.getElementById("results");
-
-const shareBtn = document.getElementById("shareBtn");
-const restartBtn = document.getElementById("restartBtn");
-
-
-/* =========================
-   选项
-========================= */
-
-const optionNames = [
- "很支持",
- "一般支持",
- "中立",
- "一般不支持",
- "很不支持"
-];
-
-const optionValues = [
- 2,
- 1,
- 0,
- -1,
- -2
-];
-
-
-/* =========================
-   开始
-========================= */
-
-startBtn.addEventListener("click",()=>{
- startScreen.classList.add("hidden");
- quizScreen.classList.remove("hidden");
- renderQuestion();
-});
-
-
-/* =========================
-   显示题目
-========================= */
 
 function renderQuestion(){
+  const question=questions[currentIndex];
+  const percent=Math.round(((currentIndex+1)/questions.length)*100);
+  document.getElementById("progress-bar").style.width=`${percent}%`;
+  document.getElementById("q-counter").textContent=`第 ${currentIndex+1} / ${questions.length} 题`;
+  document.getElementById("q-percent").textContent=`${percent}%`;
+  document.getElementById("q-title").textContent=`${question.section} · 第 ${currentIndex+1} 题`;
+  document.getElementById("q-text").textContent=question.text;
 
- const q = questions[current];
+  const selected=selectedAnswers[currentIndex];
+  document.querySelectorAll(".option-btn").forEach((button,optionIndex)=>{
+    button.classList.toggle("selected",selected===optionIndex);
+  });
 
- questionText.textContent = q.text;
-
- questionNumber.textContent =
-   "第 " + (current+1) + " 题";
-
- sectionName.textContent = q.section;
-
- progressText.textContent =
-   (current+1) + " / " + questions.length;
-
- progressBar.style.width =
-   ((current+1)/questions.length*100) + "%";
-
- optionsBox.innerHTML = "";
-
- optionNames.forEach((name,i)=>{
-
-   const btn = document.createElement("button");
-
-   btn.className = "option";
-   btn.textContent = name;
-
-   if(answers[current] === optionValues[i]){
-     btn.classList.add("selected");
-   }
-
-   btn.addEventListener("click",()=>{
-
-     answers[current] = optionValues[i];
-
-     document.querySelectorAll(".option")
-       .forEach(x=>x.classList.remove("selected"));
-
-     btn.classList.add("selected");
-
-   });
-
-   optionsBox.appendChild(btn);
-
- });
-
- prevBtn.style.visibility =
-   current === 0 ? "hidden" : "visible";
-
- nextBtn.textContent =
-   current === questions.length-1
-   ? "查看结果"
-   : "下一题";
+  document.getElementById("prev-btn").disabled=currentIndex===0;
+  const nextButton=document.getElementById("next-btn");
+  nextButton.textContent=currentIndex===questions.length-1?"查看结果 →":"下一题 →";
 }
 
+function selectOption(optionIndex){
+  if(advanceTimer!==null)return;
+  selectedAnswers[currentIndex]=optionIndex;
+  document.querySelectorAll(".option-btn").forEach((button,index)=>{
+    button.classList.toggle("selected",index===optionIndex);
+  });
 
-/* =========================
-   下一题
-========================= */
+  advanceTimer=setTimeout(()=>{
+    advanceTimer=null;
+    if(currentIndex<questions.length-1){
+      currentIndex++;
+      renderQuestion();
+    }else{
+      showResults();
+    }
+  },180);
+}
 
-nextBtn.addEventListener("click",()=>{
+function prevQuestion(){
+  clearTimeout(advanceTimer);
+  advanceTimer=null;
+  if(currentIndex>0){
+    currentIndex--;
+    renderQuestion();
+  }
+}
 
- if(answers[current] === null){
-   alert("请选择一个答案");
-   return;
- }
-
- if(current < questions.length-1){
-
-   current++;
-   renderQuestion();
-
- }else{
-
-   showResults();
-
- }
-
-});
-
-
-/* =========================
-   上一题
-========================= */
-
-prevBtn.addEventListener("click",()=>{
-
- if(current > 0){
-
-   current--;
-   renderQuestion();
-
- }
-
-});
-
-
-/* =========================
-   计算结果
-========================= */
+function nextQuestion(){
+  clearTimeout(advanceTimer);
+  advanceTimer=null;
+  if(currentIndex<questions.length-1){
+    currentIndex++;
+    renderQuestion();
+  }else{
+    showResults();
+  }
+}
 
 function calculateScores(){
+  const scores={};
+  axes.forEach(axis=>scores[axis.key]=0);
 
- const scores = {};
+  questions.forEach((question,questionIndex)=>{
+    const selected=selectedAnswers[questionIndex];
+    if(selected===null||selected===undefined)return;
+    const value=options[selected][1];
+    for(const key in question.effects){
+      scores[key]+=value*question.effects[key];
+    }
+  });
 
- axes.forEach(axis=>{
-   scores[axis.key] = 0;
- });
-
- questions.forEach((q,index)=>{
-
-   if(answers[index] === null) return;
-
-   const answer = answers[index];
-
-   Object.keys(q.effects).forEach(key=>{
-
-     scores[key] += answer * q.effects[key];
-
-   });
-
- });
-
- return scores;
+  return scores;
 }
-
-
-/* =========================
-   显示结果
-========================= */
 
 function showResults(){
-
- const scores = calculateScores();
-
- quizScreen.classList.add("hidden");
- resultScreen.classList.remove("hidden");
-
- resultsBox.innerHTML = "";
-
- axes.forEach(axis=>{
-
-   const raw = scores[axis.key];
-
-   /*
-     将分数标准化到 -100 ~ +100
-     最大可能值不会固定，因此用
-     当前维度理论最大值计算。
-   */
-
-   let max = 0;
-
-   questions.forEach(q=>{
-
-     if(q.effects[axis.key]){
-       max += 2 * Math.abs(q.effects[axis.key]);
-     }
-
-   });
-
-   if(max === 0) max = 1;
-
-   let normalized =
-     (raw / max) * 100;
-
-   normalized =
-     Math.max(-100,Math.min(100,normalized));
-
-   const position =
-     50 + normalized/2;
-
-   const div =
-     document.createElement("div");
-
-   div.className = "axis";
-
-   div.innerHTML = `
-     <div class="axis-title">${axis.title}</div>
-
-     <div class="axis-labels">
-       <span>${axis.left}</span>
-       <span>${axis.right}</span>
-     </div>
-
-     <div class="axis-line">
-       <div class="axis-mid"></div>
-       <div class="axis-dot"
-         style="left:${position}%">
-       </div>
-     </div>
-
-     <div class="axis-score">
-       ${normalized > 3 ? "偏向 " + axis.right :
-         normalized < -3 ? "偏向 " + axis.left :
-         "接近中间"}
-     </div>
-   `;
-
-   resultsBox.appendChild(div);
-
- });
-
- window.scrollTo({
-   top:0,
-   behavior:"smooth"
- });
-
+  const scores=calculateScores();
+  renderAxes(scores);
+  showScreen("result");
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
+function renderAxes(scores){
+  const container=document.getElementById("axes-results");
+  container.innerHTML=axes.map(axis=>{
+    let max=0;
+    questions.forEach(question=>{
+      if(question.effects[axis.key])max+=Math.abs(question.effects[axis.key])*2;
+    });
 
-/* =========================
-   分享
-========================= */
+    const rawRatio=max?Math.max(-1,Math.min(1,scores[axis.key]/max)):0;
+    const ratio=axis.invert?-rawRatio:rawRatio;
+    const percent=Math.round(ratio*100);
+    const width=Math.min(50,Math.abs(percent)/2);
+    const scoreClass=percent>0?"pos":percent<0?"neg":"mid";
+    const scoreText=percent>0?`+${percent}%`:`${percent}%`;
+    const fill=percent>0
+      ?`<div class="bipolar-fill pos" style="width:${width}%"></div>`
+      :percent<0
+        ?`<div class="bipolar-fill neg" style="width:${width}%"></div>`
+        :"";
 
-shareBtn.addEventListener("click",async()=>{
-
- const text =
- `我完成了“中国政治议题测试”。
-
-8个维度：
-政府规模
-经济分配
-社会价值
-政治制度
-民族文化
-文化取向
-外交军事
-国际取向
-
-测试地址：
-${location.href}`;
-
- try{
-
-   if(navigator.share){
-
-     await navigator.share({
-       title:"中国政治议题测试",
-       text:text
-     });
-
-   }else{
-
-     await navigator.clipboard.writeText(text);
-     alert("结果分享文字已经复制");
-
-   }
-
- }catch(e){}
-
-});
-
-
-/* =========================
-   重新测试
-========================= */
-
-restartBtn.addEventListener("click",()=>{
-
- current = 0;
- answers = new Array(questions.length).fill(null);
-
- resultScreen.classList.add("hidden");
- startScreen.classList.remove("hidden");
-
- window.scrollTo({
-   top:0,
-   behavior:"smooth"
- });
-
-});
-
+    return `
+      <div class="axis-item">
+        <div class="axis-header">
+          <span>${axis.name}</span>
+          <span class="axis-score ${scoreClass}">${scoreText}</span>
+        </div>
+        <div class="bipolar-wrapper">
+          <div class="bipolar-center-line"></div>
+          ${fill}
+        </div>
+        <div class="bipolar-labels">
+          <span class="${percent<0?"active neg":""}">${axis.left}</span>
+          <span class="axis-mid">中立</span>
+          <span class="${percent>0?"active pos":""}">${axis.right}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
 </script>
-
 </body>
 </html>
