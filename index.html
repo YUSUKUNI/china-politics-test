@@ -121,6 +121,47 @@ h1 {
   color: var(--primary);
 }
 
+.privacy-notice {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #475569;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 16px;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.consent-row input {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.client-status-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 .btn-primary {
   display: block;
   width: 100%;
@@ -138,6 +179,11 @@ h1 {
 
 .btn-primary:hover {
   background: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
 }
 
 .btn-primary:active {
@@ -261,6 +307,49 @@ h1 {
   font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: 22px;
+}
+
+.save-status {
+  margin: -6px 0 22px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.save-status.pending {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.save-status.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.save-status.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.save-status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.retry-save {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .axis-item {
@@ -449,7 +538,15 @@ footer {
       <li><strong>作答方式</strong>：每题根据第一直觉，在 5 个选项中选择最符合你想法的一项。</li>
       <li><strong>结果呈现</strong>：展示你在 8 个维度上的坐标位置，并给出对应方向的相对倾向。</li>
     </ul>
-    <button type="button" class="btn-primary" onclick="startTest()">开始测试</button>
+    <p class="privacy-notice">
+      完成测试后，结果会以匿名方式保存用于统计分析。系统仅记录答题数据、测试时间和匿名设备标识，不收集姓名、邮箱、账号或 IP 地址。
+    </p>
+    <label class="consent-row" for="consent-checkbox">
+      <input id="consent-checkbox" type="checkbox">
+      <span>我已了解并同意匿名提交本次测试结果。</span>
+    </label>
+    <p id="client-status-note" class="client-status-note hide" role="status"></p>
+    <button type="button" class="btn-primary" id="start-btn" disabled>开始测试</button>
   </div>
 
   <div id="question-screen" class="card hide">
@@ -479,6 +576,8 @@ footer {
     </div>
 
     <p class="result-lead">左右方向只是本测试设定的坐标方向，不代表好坏。点越靠近哪一侧，表示在本测试的设定下越接近该方向。</p>
+
+    <div id="save-status" class="save-status hide" role="status" aria-live="polite"></div>
 
     <div id="axes-results"></div>
 
@@ -536,28 +635,53 @@ const axes=[
 ];
 
 const options=[["很支持",2],["一般支持",1],["中立",0],["一般不支持",-1],["很不支持",-2]];
+const TEST_VERSION="2026-10-29";
+const CONSENT_VERSION="2026-10-29";
 const screens={
   intro:document.getElementById("intro-screen"),
   question:document.getElementById("question-screen"),
   result:document.getElementById("result-screen")
 };
+const consentCheckbox=document.getElementById("consent-checkbox");
+const startButton=document.getElementById("start-btn");
+const clientStatusNote=document.getElementById("client-status-note");
+const saveStatusBox=document.getElementById("save-status");
 
 let currentIndex=0;
 let selectedAnswers=new Array(questions.length).fill(null);
 let advanceTimer=null;
+let startedAt=null;
+let submissionInFlight=false;
+let resultSaved=false;
+let clientHasSubmitted=false;
+let pendingResultPayload=null;
 
 document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>
   `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">${option[0]}</button>`
 ).join("");
+startButton.addEventListener("click",startTest);
+consentCheckbox.addEventListener("change",()=>{
+  startButton.disabled=!consentCheckbox.checked;
+});
+checkClientStatus();
 
 function showScreen(name){
   Object.entries(screens).forEach(([key,screen])=>screen.classList.toggle("hide",key!==name));
 }
 
 function startTest(){
+  if(!consentCheckbox.checked){
+    startButton.focus();
+    return;
+  }
   clearTimeout(advanceTimer);
   currentIndex=0;
   selectedAnswers=new Array(questions.length).fill(null);
+  startedAt=new Date();
+  submissionInFlight=false;
+  resultSaved=false;
+  pendingResultPayload=null;
+  hideSaveStatus();
   showScreen("question");
   renderQuestion();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -580,6 +704,7 @@ function renderQuestion(){
   document.getElementById("prev-btn").disabled=currentIndex===0;
   const nextButton=document.getElementById("next-btn");
   nextButton.textContent=currentIndex===questions.length-1?"查看结果 →":"下一题 →";
+  nextButton.disabled=selected===null||selected===undefined;
 }
 
 function selectOption(optionIndex){
@@ -612,6 +737,7 @@ function prevQuestion(){
 function nextQuestion(){
   clearTimeout(advanceTimer);
   advanceTimer=null;
+  if(selectedAnswers[currentIndex]===null||selectedAnswers[currentIndex]===undefined)return;
   if(currentIndex<questions.length-1){
     currentIndex++;
     renderQuestion();
@@ -638,14 +764,17 @@ function calculateScores(){
 
 function showResults(){
   const scores=calculateScores();
-  renderAxes(scores);
+  const percentages=calculateAxisPercentages(scores);
+  renderAxes(percentages);
+  pendingResultPayload=buildResultPayload(scores,percentages);
   showScreen("result");
   window.scrollTo({top:0,behavior:"smooth"});
+  submitPendingResult();
 }
 
-function renderAxes(scores){
-  const container=document.getElementById("axes-results");
-  container.innerHTML=axes.map(axis=>{
+function calculateAxisPercentages(scores){
+  const percentages={};
+  axes.forEach(axis=>{
     let max=0;
     questions.forEach(question=>{
       if(question.effects[axis.key])max+=Math.abs(question.effects[axis.key])*2;
@@ -653,7 +782,15 @@ function renderAxes(scores){
 
     const rawRatio=max?Math.max(-1,Math.min(1,scores[axis.key]/max)):0;
     const ratio=axis.invert?-rawRatio:rawRatio;
-    const percent=Math.round(ratio*100);
+    percentages[axis.key]=Math.round(ratio*100);
+  });
+  return percentages;
+}
+
+function renderAxes(percentages){
+  const container=document.getElementById("axes-results");
+  container.innerHTML=axes.map(axis=>{
+    const percent=percentages[axis.key];
     const width=Math.min(50,Math.abs(percent)/2);
     const scoreClass=percent>0?"pos":percent<0?"neg":"mid";
     const scoreText=percent>0?`+${percent}%`:`${percent}%`;
@@ -681,6 +818,107 @@ function renderAxes(scores){
       </div>
     `;
   }).join("");
+}
+
+function buildResultPayload(scores,percentages){
+  const completedAt=new Date();
+  const safeStartedAt=startedAt||completedAt;
+  return {
+    testVersion:TEST_VERSION,
+    consent:true,
+    consentVersion:CONSENT_VERSION,
+    answers:selectedAnswers.slice(),
+    scores,
+    percentages,
+    startedAt:safeStartedAt.toISOString(),
+    completedAt:completedAt.toISOString(),
+    durationMs:Math.max(0,completedAt.getTime()-safeStartedAt.getTime())
+  };
+}
+
+async function submitPendingResult(){
+  if(!pendingResultPayload||submissionInFlight||resultSaved)return;
+  submissionInFlight=true;
+  showSaveStatus("正在匿名保存结果…","pending");
+
+  try{
+    const response=await fetch("/api/results",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"same-origin",
+      body:JSON.stringify(pendingResultPayload)
+    });
+
+    let data={};
+    try{
+      data=await response.json();
+    }catch{
+      data={};
+    }
+
+    if(response.status===201){
+      resultSaved=true;
+      showSaveStatus("结果已匿名保存，感谢参与。","success");
+      return;
+    }
+
+    if(response.status===409){
+      resultSaved=true;
+      clientHasSubmitted=true;
+      showSaveStatus("本设备已提交过结果，本次结果仅显示，不会重复入库。","warning");
+      showClientStatusNote();
+      return;
+    }
+
+    throw new Error(data.message||`HTTP ${response.status}`);
+  }catch(error){
+    console.error("结果保存失败：",error);
+    showSaveStatus("结果暂时未能保存，请检查网络后重试。","error",true);
+  }finally{
+    submissionInFlight=false;
+  }
+}
+
+function showSaveStatus(message,type,allowRetry=false){
+  saveStatusBox.className=`save-status ${type}`;
+  saveStatusBox.textContent=message;
+
+  if(allowRetry){
+    const retryButton=document.createElement("button");
+    retryButton.type="button";
+    retryButton.className="retry-save";
+    retryButton.textContent="重试保存";
+    retryButton.addEventListener("click",submitPendingResult);
+    saveStatusBox.appendChild(document.createTextNode(" "));
+    saveStatusBox.appendChild(retryButton);
+  }
+}
+
+function hideSaveStatus(){
+  saveStatusBox.className="save-status hide";
+  saveStatusBox.textContent="";
+}
+
+function showClientStatusNote(){
+  clientStatusNote.textContent="本设备已提交过结果；可以重新测试，但结果不会再次入库。";
+  clientStatusNote.classList.remove("hide");
+}
+
+async function checkClientStatus(){
+  try{
+    const response=await fetch("/api/client-status",{
+      credentials:"same-origin",
+      cache:"no-store"
+    });
+    if(!response.ok)return;
+    const data=await response.json();
+    if(data.submitted){
+      clientHasSubmitted=true;
+      showClientStatusNote();
+    }
+  }catch(error){
+    console.warn("无法读取客户端提交状态：",error);
+  }
 }
 </script>
 </body>
