@@ -10,7 +10,7 @@
 npm start
 ```
 
-默认地址为 `http://127.0.0.1:3000`；未设置 `PORT` 时使用随机可用端口。启动后可用：
+未设置 `PORT` 时使用随机可用端口，启动后终端会打印实际地址。启动后可用：
 
 ```powershell
 npm start -- --no-open
@@ -37,7 +37,7 @@ npm start -- --no-open
 | `DB_PATH` | `.data/results.sqlite` | SQLite 文件完整路径，优先级高于 `DATA_DIR` |
 | `COOKIE_SECURE` | 未设置 | 设为 `1` 时客户端标识 Cookie 仅通过 HTTPS 发送 |
 
-正式部署应使用 Node 22 主机和持久磁盘。GitHub Pages 只能托管静态页面，无法运行 `index.js`、API 或保存 SQLite 数据库。
+正式部署应使用 Node 22 主机和持久磁盘，并设置 `HOST=0.0.0.0` 让服务可从外部访问。GitHub Pages 只能托管静态页面，无法运行 `index.js`、API 或保存 SQLite 数据库。
 
 ## 唯一标识限制
 
