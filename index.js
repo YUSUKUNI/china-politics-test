@@ -7,10 +7,19 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const { DatabaseSync } = require("node:sqlite");
+const {
+  meta,
+  options,
+  axes,
+  questions,
+  calculateScores,
+  calculateAxisPercentages,
+} = require("./questionnaire.js");
 
 const host = process.env.HOST || "127.0.0.1";
 const port = Number(process.env.PORT) || 0;
 const indexPath = path.join(__dirname, "index.html");
+const questionnairePath = path.join(__dirname, "questionnaire.js");
 const dataDir = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, ".data");
@@ -18,19 +27,11 @@ const databasePath = process.env.DB_PATH
   ? path.resolve(process.env.DB_PATH)
   : path.join(dataDir, "results.sqlite");
 
-const TEST_VERSION = "2026-10-29";
-const CONSENT_VERSION = "2026-10-29";
-const QUESTION_COUNT = 30;
-const AXIS_KEYS = [
-  "government",
-  "income",
-  "social",
-  "political",
-  "han",
-  "culture",
-  "peace",
-  "west",
-];
+const TEST_VERSION = meta.testVersion;
+const CONSENT_VERSION = meta.consentVersion;
+const QUESTION_COUNT = questions.length;
+const OPTION_COUNT = options.length;
+const SCHEMA_VERSION = 1;
 const CLIENT_COOKIE_NAME = "political_test_client";
 const CLIENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const MAX_BODY_BYTES = 64 * 1024;
@@ -39,30 +40,10 @@ const MAX_TEST_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 
 const database = new DatabaseSync(databasePath);
-database.exec(`
-  PRAGMA journal_mode = WAL;
-  PRAGMA synchronous = NORMAL;
+initializeDatabase();
 
-  CREATE TABLE IF NOT EXISTS results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    result_id TEXT NOT NULL UNIQUE,
-    client_id TEXT NOT NULL UNIQUE,
-    test_version TEXT NOT NULL,
-    consent_version TEXT NOT NULL,
-    started_at TEXT NOT NULL,
-    completed_at TEXT NOT NULL,
-    duration_ms INTEGER NOT NULL,
-    answers_json TEXT NOT NULL,
-    scores_json TEXT NOT NULL,
-    percentages_json TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_results_created_at ON results(created_at);
-`);
-
-const findResultByClient = database.prepare(
-  "SELECT result_id, created_at FROM results WHERE client_id = ?"
+const findResultByClientAndVersion = database.prepare(
+  "SELECT result_id, created_at FROM results WHERE client_id = ? AND test_version = ?"
 );
 const insertResult = database.prepare(`
   INSERT INTO results (
@@ -78,6 +59,120 @@ const insertResult = database.prepare(`
     percentages_json
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
+
+function initializeDatabase() {
+  database.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+  `);
+
+  const existingTable = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'results'")
+    .get();
+
+  if (existingTable && isLegacyResultsSchema(existingTable.sql)) {
+    backupDatabase();
+    migrateLegacyResultsTable();
+  }
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      result_id TEXT NOT NULL UNIQUE,
+      client_id TEXT NOT NULL,
+      test_version TEXT NOT NULL,
+      consent_version TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      completed_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      answers_json TEXT NOT NULL,
+      scores_json TEXT NOT NULL,
+      percentages_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      UNIQUE (client_id, test_version)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_results_created_at ON results(created_at);
+    PRAGMA user_version = ${SCHEMA_VERSION};
+  `);
+}
+
+function isLegacyResultsSchema(sql) {
+  return /client_id\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i.test(String(sql || ""));
+}
+
+function backupDatabase() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupPath = `${databasePath}.pre-versioned-uniqueness-${timestamp}.bak`;
+  const escapedPath = backupPath.replace(/'/g, "''");
+  database.exec(`VACUUM INTO '${escapedPath}'`);
+  console.log(`已备份旧数据库：${backupPath}`);
+}
+
+function migrateLegacyResultsTable() {
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database.exec(`
+      DROP TABLE IF EXISTS results_v2_migration;
+
+      CREATE TABLE results_v2_migration (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        result_id TEXT NOT NULL UNIQUE,
+        client_id TEXT NOT NULL,
+        test_version TEXT NOT NULL,
+        consent_version TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        answers_json TEXT NOT NULL,
+        scores_json TEXT NOT NULL,
+        percentages_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        UNIQUE (client_id, test_version)
+      );
+
+      INSERT INTO results_v2_migration (
+        id,
+        result_id,
+        client_id,
+        test_version,
+        consent_version,
+        started_at,
+        completed_at,
+        duration_ms,
+        answers_json,
+        scores_json,
+        percentages_json,
+        created_at
+      )
+      SELECT
+        id,
+        result_id,
+        client_id,
+        test_version,
+        consent_version,
+        started_at,
+        completed_at,
+        duration_ms,
+        answers_json,
+        scores_json,
+        percentages_json,
+        created_at
+      FROM results;
+
+      DROP TABLE results;
+      ALTER TABLE results_v2_migration RENAME TO results;
+    `);
+    database.exec("COMMIT");
+    console.log("已将结果表迁移为按测试版本去重。");
+  } catch (error) {
+    try {
+      database.exec("ROLLBACK");
+    } catch {
+    }
+    throw error;
+  }
+}
 
 class HttpError extends Error {
   constructor(status, code, message) {
@@ -131,6 +226,14 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (requestUrl.pathname === "/questionnaire.js") {
+    if (request.method !== "GET") {
+      throw new HttpError(405, "method_not_allowed", "仅支持 GET 请求。");
+    }
+    serveQuestionnaire(response);
+    return;
+  }
+
   if (requestUrl.pathname === "/" || requestUrl.pathname === "/index.html") {
     if (request.method !== "GET") {
       throw new HttpError(405, "method_not_allowed", "仅支持 GET 请求。");
@@ -167,9 +270,27 @@ function serveIndex(request, response) {
   });
 }
 
+function serveQuestionnaire(response) {
+  fs.readFile(questionnairePath, (error, content) => {
+    if (error) {
+      response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("无法读取 questionnaire.js");
+      return;
+    }
+
+    response.writeHead(200, {
+      "Content-Type": "text/javascript; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(content);
+  });
+}
+
 function handleClientStatus(request, response) {
   const clientId = getClientId(request);
-  const existing = clientId ? findResultByClient.get(clientId) : undefined;
+  const existing = clientId
+    ? findResultByClientAndVersion.get(clientId, TEST_VERSION)
+    : undefined;
 
   sendJson(response, 200, {
     submitted: Boolean(existing),
@@ -198,10 +319,10 @@ async function handleResultSubmission(request, response) {
   const body = await readJsonBody(request);
   const payload = validateResultPayload(body);
 
-  if (findResultByClient.get(clientId)) {
+  if (findResultByClientAndVersion.get(clientId, TEST_VERSION)) {
     sendJson(response, 409, {
       error: "duplicate_submission",
-      message: "该设备已提交过结果，本次不会重复保存。",
+      message: "该设备已提交过当前版本，本次不会重复保存。",
     });
     return;
   }
@@ -225,7 +346,7 @@ async function handleResultSubmission(request, response) {
     if (error.errcode === 2067 || /UNIQUE constraint failed/.test(error.message)) {
       sendJson(response, 409, {
         error: "duplicate_submission",
-        message: "该设备已提交过结果，本次不会重复保存。",
+        message: "该设备已提交过当前版本，本次不会重复保存。",
       });
       return;
     }
@@ -257,20 +378,16 @@ function validateResultPayload(body) {
     !Array.isArray(body.answers) ||
     body.answers.length !== QUESTION_COUNT ||
     body.answers.some(
-      (answer) => !Number.isInteger(answer) || answer < 0 || answer > 4
+      (answer) =>
+        !Number.isInteger(answer) || answer < 0 || answer >= OPTION_COUNT
     )
   ) {
     throw new HttpError(400, "invalid_answers", "答题数据不完整或格式不正确。");
   }
 
-  const scores = validateAxisValues(body.scores, "scores", -1000, 1000, false);
-  const percentages = validateAxisValues(
-    body.percentages,
-    "percentages",
-    -100,
-    100,
-    true
-  );
+  const answers = body.answers.slice();
+  const scores = calculateScores(answers);
+  const percentages = calculateAxisPercentages(scores);
 
   const startedAt = parseTimestamp(body.startedAt, "startedAt");
   const completedAt = parseTimestamp(body.completedAt, "completedAt");
@@ -285,34 +402,13 @@ function validateResultPayload(body) {
   }
 
   return {
-    answers: body.answers.slice(),
+    answers,
     scores,
     percentages,
     startedAt,
     completedAt,
     durationMs: Math.round(durationMs),
   };
-}
-
-function validateAxisValues(value, fieldName, min, max, integerOnly) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new HttpError(400, "invalid_payload", `${fieldName} 必须是对象。`);
-  }
-
-  const result = {};
-  for (const key of AXIS_KEYS) {
-    const number = value[key];
-    if (
-      !Number.isFinite(number) ||
-      number < min ||
-      number > max ||
-      (integerOnly && !Number.isInteger(number))
-    ) {
-      throw new HttpError(400, "invalid_payload", `${fieldName}.${key} 数值不合法。`);
-    }
-    result[key] = number;
-  }
-  return result;
 }
 
 function parseTimestamp(value, fieldName) {

@@ -524,17 +524,17 @@ footer {
 <div class="container">
   <header>
     <h1>中国政治立场测试</h1>
-    <div class="subtitle">30 题情景版</div>
+    <div class="subtitle">47 题情景版</div>
     <div class="header-meta">八维坐标 · <span>即时生成结果</span></div>
   </header>
 
   <div id="intro-screen" class="card">
     <h2 class="intro-title">测试须知</h2>
     <p class="intro-copy">
-      本测试通过 30 道关于财政、社会、税收、政治、文化与外交的选择题，计算你在八个坐标轴上的相对位置。结果仅用于本测试设定下的参考，不代表价值判断。
+      本测试通过 47 道关于财政、社会、税收、政治、文化与外交的选择题，计算你在八个坐标轴上的相对位置。结果仅用于本测试设定下的参考，不代表价值判断。
     </p>
     <ul class="instruction-list">
-      <li><strong>题目数量</strong>：共 30 道情景命题。</li>
+      <li><strong>题目数量</strong>：共 47 道情景命题。</li>
       <li><strong>作答方式</strong>：每题根据第一直觉，在 5 个选项中选择最符合你想法的一项。</li>
       <li><strong>结果呈现</strong>：展示你在 8 个维度上的坐标位置，并给出对应方向的相对倾向。</li>
     </ul>
@@ -554,8 +554,8 @@ footer {
       <div id="progress-bar" class="progress-bar"></div>
     </div>
     <div class="progress-text">
-      <span id="q-counter">第 1 / 30 题</span>
-      <span id="q-percent">3%</span>
+      <span id="q-counter">第 1 / 47 题</span>
+      <span id="q-percent">2%</span>
     </div>
 
     <div id="q-title" class="question-title">题目加载中...</div>
@@ -589,54 +589,18 @@ footer {
   <footer>中国政治立场测试 · 结果仅表示本测试设定下的相对位置</footer>
 </div>
 
+<script src="/questionnaire.js"></script>
 <script>
-const questions=[
-{section:"财政问题",text:"你是否支持保护房价",effects:{government:1,income:.8}},
-{section:"财政问题",text:"你是否支持继续大基建拉动经济",effects:{government:1,income:1}},
-{section:"财政问题",text:"你是否支持设立最低工资",effects:{government:1,income:1}},
-{section:"财政问题",text:"你是否支持个人购置城市土地建房子",effects:{government:-.5,income:.7}},
-{section:"财政问题",text:"你是否支持每人每年一个固定数额的医保和退休金制度支出",effects:{government:1,income:1}},
-{section:"社会制度",text:"你是否支持取消户口自由迁徙限制？",effects:{government:-1,income:1}},
-{section:"社会制度",text:"你是否支持婚前财产在离婚时进行分割？",effects:{social:1,income:1}},
-{section:"社会制度",text:"你是否支持设立保护同性伴侣同等民事权利的制度",effects:{social:1}},
-{section:"社会制度",text:"你是否支持犯罪记录公开（服刑过后依然有标签）",effects:{social:-1}},
-{section:"社会制度",text:"你是否支持身份证上划分各民族",effects:{han:.5}},
-{section:"税收",text:"你是否支持购买商品时标注消费税数额",effects:{government:.2}},
-{section:"税收",text:"你是否支持设立房产税",effects:{government:1,income:1}},
-{section:"税收",text:"你是否支持下调个人所得税起征点",effects:{government:1,income:1}},
-{section:"税收",text:"你是否支持设立遗产税",effects:{government:1,income:1}},
-{section:"税收",text:"你是否支持增加企业所得税",effects:{government:1,income:1}},
-{section:"政治制度",text:"你是否支持多党制",effects:{political:1}},
-{section:"政治制度",text:"你是否支持自由结社权利以及宗教信仰自由",effects:{political:1}},
-{section:"政治制度",text:"你是否支持报社新闻媒体自由",effects:{political:1}},
-{section:"政治制度",text:"你是否支持互联网城墙",effects:{political:-1}},
-{section:"政治制度",text:"你是否支持民选产生官员",effects:{political:1}},
-{section:"民族文化",text:"你是否支持中华文化是以汉族文化为主导的",effects:{han:-2,culture:-1}},
-{section:"民族文化",text:"你是否支持对少数民族地区推行汉化政策",effects:{han:-1,culture:-1}},
-{section:"民族文化",text:"你是否支持保护少数民族文化语言的专项政策（包括地方方言）",effects:{han:.5,culture:1}},
-{section:"民族文化",text:"你是否支持过洋节",effects:{culture:1,west:-1}},
-{section:"民族文化",text:"你是否支持设立一门外语作为义务教育主课",effects:{culture:1,west:-1}},
-{section:"地缘外交",text:"关于台湾问题，你是否支持维持现状、坚持一个中国各自表述，而不以武力解决？",effects:{peace:-1,west:-.5}},
-{section:"地缘外交",text:"你是否支持俄罗斯入侵乌克兰",effects:{peace:1,west:2}},
-{section:"地缘外交",text:"你是否支持美国进攻伊朗",effects:{peace:1,west:-2}},
-{section:"地缘外交",text:"你是否支持哈马斯进攻以色列",effects:{peace:1,west:2}},
-{section:"地缘外交",text:"你是否支持如果有可能，尝试恢复部分外东北、外西北，甚至蒙古地区",effects:{peace:1,han:-.5,west:-.5}}
-];
-
-const axes=[
-{key:"government",name:"政府规模",left:"小政府",right:"大政府"},
-{key:"income",name:"经济分配",left:"偏高收入",right:"偏低收入"},
-{key:"social",name:"社会价值",left:"社会保守",right:"社会自由"},
-{key:"political",name:"政治制度",left:"权力集中",right:"政治开放"},
-{key:"han",name:"民族文化",left:"多元文化",right:"大汉族主义",invert:true},
-{key:"culture",name:"文化取向",left:"文化保守",right:"文化开放"},
-{key:"peace",name:"外交军事",left:"武力主义",right:"和平主义",invert:true},
-{key:"west",name:"国际取向",left:"反欧美中心",right:"亲欧美",invert:true}
-];
-
-const options=[["很支持",2],["一般支持",1],["中立",0],["一般不支持",-1],["很不支持",-2]];
-const TEST_VERSION="2026-10-29";
-const CONSENT_VERSION="2026-10-29";
+const {
+  meta,
+  options,
+  axes,
+  questions,
+  calculateScores: calculateAnswerScores,
+  calculateAxisPercentages: getAxisPercentages,
+} = globalThis.QUESTIONNAIRE;
+const TEST_VERSION=meta.testVersion;
+const CONSENT_VERSION=meta.consentVersion;
 const screens={
   intro:document.getElementById("intro-screen"),
   question:document.getElementById("question-screen"),
@@ -746,45 +710,14 @@ function nextQuestion(){
   }
 }
 
-function calculateScores(){
-  const scores={};
-  axes.forEach(axis=>scores[axis.key]=0);
-
-  questions.forEach((question,questionIndex)=>{
-    const selected=selectedAnswers[questionIndex];
-    if(selected===null||selected===undefined)return;
-    const value=options[selected][1];
-    for(const key in question.effects){
-      scores[key]+=value*question.effects[key];
-    }
-  });
-
-  return scores;
-}
-
 function showResults(){
-  const scores=calculateScores();
-  const percentages=calculateAxisPercentages(scores);
+  const scores=calculateAnswerScores(selectedAnswers);
+  const percentages=getAxisPercentages(scores);
   renderAxes(percentages);
-  pendingResultPayload=buildResultPayload(scores,percentages);
+  pendingResultPayload=buildResultPayload();
   showScreen("result");
   window.scrollTo({top:0,behavior:"smooth"});
   submitPendingResult();
-}
-
-function calculateAxisPercentages(scores){
-  const percentages={};
-  axes.forEach(axis=>{
-    let max=0;
-    questions.forEach(question=>{
-      if(question.effects[axis.key])max+=Math.abs(question.effects[axis.key])*2;
-    });
-
-    const rawRatio=max?Math.max(-1,Math.min(1,scores[axis.key]/max)):0;
-    const ratio=axis.invert?-rawRatio:rawRatio;
-    percentages[axis.key]=Math.round(ratio*100);
-  });
-  return percentages;
 }
 
 function renderAxes(percentages){
@@ -820,7 +753,7 @@ function renderAxes(percentages){
   }).join("");
 }
 
-function buildResultPayload(scores,percentages){
+function buildResultPayload(){
   const completedAt=new Date();
   const safeStartedAt=startedAt||completedAt;
   return {
@@ -828,8 +761,6 @@ function buildResultPayload(scores,percentages){
     consent:true,
     consentVersion:CONSENT_VERSION,
     answers:selectedAnswers.slice(),
-    scores,
-    percentages,
     startedAt:safeStartedAt.toISOString(),
     completedAt:completedAt.toISOString(),
     durationMs:Math.max(0,completedAt.getTime()-safeStartedAt.getTime())
@@ -865,7 +796,7 @@ async function submitPendingResult(){
     if(response.status===409){
       resultSaved=true;
       clientHasSubmitted=true;
-      showSaveStatus("本设备已提交过结果，本次结果仅显示，不会重复入库。","warning");
+      showSaveStatus("本设备已提交过当前版本，本次结果仅显示，不会重复入库。","warning");
       showClientStatusNote();
       return;
     }
@@ -900,7 +831,7 @@ function hideSaveStatus(){
 }
 
 function showClientStatusNote(){
-  clientStatusNote.textContent="本设备已提交过结果；可以重新测试，但结果不会再次入库。";
+  clientStatusNote.textContent="本设备已提交过当前版本；可以重新测试，但当前版本结果不会再次入库。";
   clientStatusNote.classList.remove("hide");
 }
 
