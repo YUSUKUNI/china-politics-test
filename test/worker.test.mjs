@@ -104,8 +104,12 @@ describe("result API", () => {
       questionnaire.calculateScores(payload.answers)
     );
     expect(JSON.parse(row.percentages_json)).toEqual(
-      questionnaire.calculateAxisPercentages(
-        questionnaire.calculateScores(payload.answers)
+      JSON.parse(
+        JSON.stringify(
+          questionnaire.calculateAxisPercentages(
+            questionnaire.calculateScores(payload.answers)
+          )
+        )
       )
     );
 
@@ -224,8 +228,9 @@ describe("admin CSV export", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/csv");
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe(ALLOWED_ORIGIN);
-    const csv = await response.text();
-    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const csvBytes = new Uint8Array(await response.arrayBuffer());
+    expect(Array.from(csvBytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    const csv = new TextDecoder().decode(csvBytes);
     expect(csv).toContain("score_government,percentage_government");
     expect(csv).toContain("q01");
     expect(csv).toContain("q47");
