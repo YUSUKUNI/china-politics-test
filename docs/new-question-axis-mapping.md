@@ -2,6 +2,8 @@
 
 日期：2026-11-03
 
+47 道题的完整题干、数组下标与轴权重总表见 [`question-axis-weight-list.md`](./question-axis-weight-list.md)。
+
 ## 一、结论摘要
 
 - 原 30 题的题干、顺序、左右方向和计分权重保持不变。

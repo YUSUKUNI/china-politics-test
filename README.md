@@ -170,7 +170,7 @@ CSV 的“受保护”依赖 HTTPS 和 `ADMIN_EXPORT_TOKEN`，不是额外的文
 
 - `questionnaire.js` 同时供浏览器、Node 和 Worker 使用，集中保存题目、八轴定义、选项和计分逻辑。
 - 当前测试版本为 `2026-11-03`，同意书版本为 `2026-10-29`。
-- 新题与八轴的对应关系见 `docs/new-question-axis-mapping.md`。分析不同版本数据时应按 `test_version` 分组。
+- 47 题完整题干、数组下标与八轴权重总表见 `docs/question-axis-weight-list.md`；扩展题设计说明见 `docs/new-question-axis-mapping.md`。分析不同版本数据时应按 `test_version` 分组。
 
 ## 唯一标识限制
 
