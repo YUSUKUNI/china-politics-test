@@ -1,0 +1,114 @@
+import { describe, expect, it } from "vitest";
+import questionnaire from "../questionnaire.js";
+import resultUtils from "../shared/results.js";
+
+const {
+  validateResultPayload,
+  buildCsvHeader,
+  buildCsvRecord,
+  buildCsvDocument,
+  isUuid,
+} = resultUtils;
+
+function makePayload(overrides = {}) {
+  return {
+    testVersion: questionnaire.meta.testVersion,
+    consent: true,
+    consentVersion: questionnaire.meta.consentVersion,
+    answers: new Array(questionnaire.questions.length).fill(2),
+    startedAt: "2026-11-03T10:00:00.000Z",
+    completedAt: "2026-11-03T10:08:00.000Z",
+    durationMs: 480000,
+    ...overrides,
+  };
+}
+
+describe("questionnaire and result validation", () => {
+  it("keeps the current 47-question version", () => {
+    expect(questionnaire.questions).toHaveLength(47);
+    expect(questionnaire.axes).toHaveLength(8);
+    expect(questionnaire.meta.testVersion).toBe("2026-11-03");
+  });
+
+  it("recalculates scores and ignores client-supplied scores", () => {
+    const payload = makePayload({ scores: { government: 9999 } });
+    const result = validateResultPayload(payload, questionnaire);
+
+    expect(result.answers).toEqual(payload.answers);
+    expect(result.scores).toEqual(
+      questionnaire.calculateScores(payload.answers)
+    );
+    expect(result.percentages).toEqual(
+      questionnaire.calculateAxisPercentages(result.scores)
+    );
+    expect(result.scores.government).not.toBe(9999);
+  });
+
+  it("keeps all axis percentages inside the expected range", () => {
+    for (const answer of [0, 1, 2, 3, 4]) {
+      const result = validateResultPayload(
+        makePayload({ answers: new Array(47).fill(answer) }),
+        questionnaire
+      );
+      Object.values(result.percentages).forEach((percentage) => {
+        expect(percentage).toBeGreaterThanOrEqual(-100);
+        expect(percentage).toBeLessThanOrEqual(100);
+      });
+    }
+  });
+
+  it.each([
+    ["wrong version", { testVersion: "old-version" }, "version_mismatch"],
+    ["missing consent", { consent: false }, "consent_required"],
+    ["wrong consent version", { consentVersion: "old-version" }, "consent_required"],
+    ["short answers", { answers: new Array(46).fill(2) }, "invalid_answers"],
+    ["invalid option", { answers: [5, ...new Array(46).fill(2)] }, "invalid_answers"],
+    ["invalid timestamp", { startedAt: "not-a-date" }, "invalid_timestamp"],
+    ["reversed timestamps", {
+      startedAt: "2026-11-03T10:10:00.000Z",
+      completedAt: "2026-11-03T10:00:00.000Z",
+    }, "invalid_timestamp"],
+    ["invalid duration", { durationMs: -1 }, "invalid_duration"],
+  ])("rejects %s", (_name, overrides, code) => {
+    try {
+      validateResultPayload(makePayload(overrides), questionnaire);
+      throw new Error("Expected validation to fail.");
+    } catch (error) {
+      expect(error.code).toBe(code);
+    }
+  });
+});
+
+describe("CSV export", () => {
+  it("contains all result fields, axes and answers", () => {
+    const record = {
+      result_id: "result-1",
+      client_id: "client-1",
+      test_version: questionnaire.meta.testVersion,
+      consent_version: questionnaire.meta.consentVersion,
+      started_at: "2026-11-03T10:00:00.000Z",
+      completed_at: "2026-11-03T10:08:00.000Z",
+      duration_ms: 480000,
+      answers_json: JSON.stringify(new Array(47).fill(2)),
+      scores_json: JSON.stringify({ government: 1 }),
+      percentages_json: JSON.stringify({ government: 10 }),
+      created_at: "2026-11-03T10:08:01.000Z",
+    };
+
+    const header = buildCsvHeader(questionnaire);
+    const row = buildCsvRecord(record, questionnaire);
+    const document = buildCsvDocument([record], questionnaire);
+
+    expect(header).toContain("score_government,percentage_government");
+    expect(header).toContain("q01");
+    expect(header).toContain("q47");
+    expect(row).toContain("result-1,client-1");
+    expect(document.startsWith("\uFEFF")).toBe(true);
+    expect(document.split("\r\n")).toHaveLength(3);
+  });
+
+  it("accepts normal UUIDs and rejects malformed ids", () => {
+    expect(isUuid("123e4567-e89b-42d3-a456-426614174000")).toBe(true);
+    expect(isUuid("not-a-uuid")).toBe(false);
+  });
+});
