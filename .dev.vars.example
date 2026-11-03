@@ -1,0 +1,2 @@
+ADMIN_EXPORT_TOKEN=replace-with-a-long-random-token
+ALLOWED_ORIGINS=https://yusukuni.github.io,http://127.0.0.1:8788,http://localhost:8788

@@ -7,14 +7,14 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const { DatabaseSync } = require("node:sqlite");
+const QUESTIONNAIRE = require("./questionnaire.js");
+const { meta } = QUESTIONNAIRE;
 const {
-  meta,
-  options,
-  axes,
-  questions,
-  calculateScores,
-  calculateAxisPercentages,
-} = require("./questionnaire.js");
+  HttpError,
+  MAX_BODY_BYTES,
+  isUuid,
+  validateResultPayload: validateSubmittedResult,
+} = require("./shared/results.js");
 
 const host = process.env.HOST || "127.0.0.1";
 const port = Number(process.env.PORT) || 0;
@@ -29,13 +29,9 @@ const databasePath = process.env.DB_PATH
 
 const TEST_VERSION = meta.testVersion;
 const CONSENT_VERSION = meta.consentVersion;
-const QUESTION_COUNT = questions.length;
-const OPTION_COUNT = options.length;
 const SCHEMA_VERSION = 1;
 const CLIENT_COOKIE_NAME = "political_test_client";
 const CLIENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-const MAX_BODY_BYTES = 64 * 1024;
-const MAX_TEST_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 
@@ -174,14 +170,6 @@ function migrateLegacyResultsTable() {
   }
 }
 
-class HttpError extends Error {
-  constructor(status, code, message) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
-
 const server = http.createServer((request, response) => {
   handleRequest(request, response).catch((error) => {
     if (response.writableEnded) {
@@ -295,6 +283,7 @@ function handleClientStatus(request, response) {
   sendJson(response, 200, {
     submitted: Boolean(existing),
     completedAt: existing ? existing.created_at : null,
+    testVersion: TEST_VERSION,
   });
 }
 
@@ -317,7 +306,7 @@ async function handleResultSubmission(request, response) {
   }
 
   const body = await readJsonBody(request);
-  const payload = validateResultPayload(body);
+  const payload = validateSubmittedResult(body, QUESTIONNAIRE);
 
   if (findResultByClientAndVersion.get(clientId, TEST_VERSION)) {
     sendJson(response, 409, {
@@ -359,68 +348,6 @@ async function handleResultSubmission(request, response) {
     resultId,
     message: "结果已匿名保存。",
   });
-}
-
-function validateResultPayload(body) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new HttpError(400, "invalid_payload", "提交内容格式不正确。");
-  }
-
-  if (body.testVersion !== TEST_VERSION) {
-    throw new HttpError(400, "version_mismatch", "测试版本不匹配，请刷新后重试。");
-  }
-
-  if (body.consent !== true || body.consentVersion !== CONSENT_VERSION) {
-    throw new HttpError(400, "consent_required", "提交前必须同意匿名数据说明。");
-  }
-
-  if (
-    !Array.isArray(body.answers) ||
-    body.answers.length !== QUESTION_COUNT ||
-    body.answers.some(
-      (answer) =>
-        !Number.isInteger(answer) || answer < 0 || answer >= OPTION_COUNT
-    )
-  ) {
-    throw new HttpError(400, "invalid_answers", "答题数据不完整或格式不正确。");
-  }
-
-  const answers = body.answers.slice();
-  const scores = calculateScores(answers);
-  const percentages = calculateAxisPercentages(scores);
-
-  const startedAt = parseTimestamp(body.startedAt, "startedAt");
-  const completedAt = parseTimestamp(body.completedAt, "completedAt");
-  const durationMs = Number(body.durationMs);
-
-  if (
-    !Number.isFinite(durationMs) ||
-    durationMs < 0 ||
-    durationMs > MAX_TEST_DURATION_MS
-  ) {
-    throw new HttpError(400, "invalid_duration", "测试时长格式不正确。");
-  }
-
-  return {
-    answers,
-    scores,
-    percentages,
-    startedAt,
-    completedAt,
-    durationMs: Math.round(durationMs),
-  };
-}
-
-function parseTimestamp(value, fieldName) {
-  if (typeof value !== "string") {
-    throw new HttpError(400, "invalid_timestamp", `${fieldName} 格式不正确。`);
-  }
-
-  const timestamp = new Date(value);
-  if (Number.isNaN(timestamp.getTime())) {
-    throw new HttpError(400, "invalid_timestamp", `${fieldName} 格式不正确。`);
-  }
-  return timestamp.toISOString();
 }
 
 async function readJsonBody(request) {
@@ -472,17 +399,12 @@ function parseCookies(header) {
 }
 
 function getClientId(request) {
+  const headerClientId = request.headers["x-client-id"];
+  if (isUuid(headerClientId)) {
+    return headerClientId;
+  }
   const clientId = parseCookies(request.headers.cookie)[CLIENT_COOKIE_NAME];
   return isUuid(clientId) ? clientId : null;
-}
-
-function isUuid(value) {
-  return (
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value
-    )
-  );
 }
 
 function buildClientCookie(request, clientId) {

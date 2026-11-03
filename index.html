@@ -589,6 +589,7 @@ footer {
   <footer>中国政治立场测试 · 结果仅表示本测试设定下的相对位置</footer>
 </div>
 
+<script src="api-config.js"></script>
 <script src="questionnaire.js"></script>
 <script>
 const {
@@ -601,6 +602,12 @@ const {
 } = globalThis.QUESTIONNAIRE;
 const TEST_VERSION=meta.testVersion;
 const CONSENT_VERSION=meta.consentVersion;
+const API_BASE=String(globalThis.POLITICS_TEST_CONFIG?.apiBase||"").replace(/\/+$/,"");
+const IS_GITHUB_PAGES=/\.github\.io$/i.test(location.hostname);
+const API_CONFIGURED=Boolean(API_BASE)||!IS_GITHUB_PAGES;
+const CLIENT_ID_STORAGE_KEY="china_politics_test_client_id";
+let memoryClientId=null;
+const CLIENT_ID=getOrCreateClientId();
 const screens={
   intro:document.getElementById("intro-screen"),
   question:document.getElementById("question-screen"),
@@ -619,6 +626,37 @@ let submissionInFlight=false;
 let resultSaved=false;
 let clientHasSubmitted=false;
 let pendingResultPayload=null;
+
+function generateClientId(){
+  if(globalThis.crypto?.randomUUID)return crypto.randomUUID();
+  const bytes=crypto.getRandomValues(new Uint8Array(16));
+  bytes[6]=(bytes[6]&0x0f)|0x40;
+  bytes[8]=(bytes[8]&0x3f)|0x80;
+  const hex=Array.from(bytes,byte=>byte.toString(16).padStart(2,"0")).join("");
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+function isClientId(value){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||""));
+}
+
+function getOrCreateClientId(){
+  try{
+    const stored=localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    if(isClientId(stored))return stored;
+    const generated=generateClientId();
+    localStorage.setItem(CLIENT_ID_STORAGE_KEY,generated);
+    return generated;
+  }catch(error){
+    if(!memoryClientId)memoryClientId=generateClientId();
+    console.warn("无法使用浏览器本地存储，本次匿名标识仅在当前页面有效。",error);
+    return memoryClientId;
+  }
+}
+
+function apiUrl(path){
+  return `${API_BASE}${path}`;
+}
 
 document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>
   `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">${option[0]}</button>`
@@ -769,14 +807,18 @@ function buildResultPayload(){
 
 async function submitPendingResult(){
   if(!pendingResultPayload||submissionInFlight||resultSaved)return;
+  if(!API_CONFIGURED){
+    showSaveStatus("在线保存尚未配置，本次结果仅在本页显示。","warning");
+    return;
+  }
   submissionInFlight=true;
   showSaveStatus("正在匿名保存结果…","pending");
 
   try{
-    const response=await fetch("/api/results",{
+    const response=await fetch(apiUrl("/api/results"),{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
-      credentials:"same-origin",
+      headers:{"Content-Type":"application/json","X-Client-Id":CLIENT_ID},
+      credentials:"omit",
       body:JSON.stringify(pendingResultPayload)
     });
 
@@ -836,9 +878,11 @@ function showClientStatusNote(){
 }
 
 async function checkClientStatus(){
+  if(!API_CONFIGURED)return;
   try{
-    const response=await fetch("/api/client-status",{
-      credentials:"same-origin",
+    const response=await fetch(apiUrl("/api/client-status"),{
+      headers:{"X-Client-Id":CLIENT_ID},
+      credentials:"omit",
       cache:"no-store"
     });
     if(!response.ok)return;

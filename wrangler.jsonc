@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "china-politics-test-api",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-11-03",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://yusukuni.github.io"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "china-politics-test-results",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "worker/migrations"
+    }
+  ]
+}
