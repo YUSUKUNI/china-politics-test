@@ -250,6 +250,133 @@ describe("admin CSV export", () => {
   });
 });
 
+describe("admin dashboard", () => {
+  it("requires a valid bearer token", async () => {
+    const missing = await apiFetch("/api/admin/results", {
+      headers: { Origin: ALLOWED_ORIGIN },
+    });
+    expect(missing.status).toBe(401);
+    expect(missing.headers.get("WWW-Authenticate")).toContain("Bearer");
+
+    const wrong = await apiFetch("/api/admin/results", {
+      headers: {
+        Origin: ALLOWED_ORIGIN,
+        Authorization: "Bearer wrong-token",
+      },
+    });
+    expect(wrong.status).toBe(401);
+  });
+
+  it("returns summaries, axis averages, importance rankings and paginated details", async () => {
+    const firstImportance = new Array(60).fill(false);
+    firstImportance[0] = true;
+    expect(
+      (await submit(
+        makePayload({
+          answers: new Array(60).fill(2),
+          importantQuestions: firstImportance,
+          durationMs: 480000,
+        }),
+        crypto.randomUUID()
+      )).status
+    ).toBe(201);
+
+    const secondImportance = new Array(60).fill(false);
+    secondImportance[1] = true;
+    secondImportance[2] = true;
+    const secondClientId = crypto.randomUUID();
+    expect(
+      (await submit(
+        makePayload({
+          answers: new Array(60).fill(0),
+          importantQuestions: secondImportance,
+          durationMs: 600000,
+        }),
+        secondClientId
+      )).status
+    ).toBe(201);
+
+    const response = await apiFetch(
+      "/api/admin/results?page=1&pageSize=1&version=" +
+        encodeURIComponent(questionnaire.meta.testVersion),
+      {
+        headers: {
+          Origin: ALLOWED_ORIGIN,
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+        },
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(ALLOWED_ORIGIN);
+    const dashboard = await readJson(response);
+
+    expect(dashboard.summary.total).toBe(2);
+    expect(dashboard.summary.uniqueClients).toBe(2);
+    expect(dashboard.summary.importanceMarks).toBe(3);
+    expect(dashboard.summary.averageDurationMs).toBe(540000);
+    expect(dashboard.summary.axes).toHaveLength(8);
+    expect(dashboard.summary.axes.every((axis) => axis.averagePercentage !== null)).toBe(true);
+    expect(dashboard.summary.daily.length).toBeGreaterThan(0);
+    expect(dashboard.summary.versions).toContainEqual(
+      expect.objectContaining({
+        version: questionnaire.meta.testVersion,
+        count: 2,
+      })
+    );
+    expect(dashboard.summary.topImportantQuestions[0]).toMatchObject({
+      count: 1,
+      share: 50,
+    });
+
+    expect(dashboard.pagination).toMatchObject({
+      page: 1,
+      pageSize: 1,
+      total: 2,
+      pageCount: 2,
+    });
+    expect(dashboard.results).toHaveLength(1);
+    expect(dashboard.results[0]).toMatchObject({
+      clientId: secondClientId,
+      testVersion: questionnaire.meta.testVersion,
+      importanceCount: 2,
+    });
+    expect(dashboard.results[0].answers).toHaveLength(60);
+    expect(dashboard.results[0].importantQuestions).toHaveLength(60);
+    expect(Object.keys(dashboard.results[0].percentages)).toHaveLength(8);
+
+    const searchResponse = await apiFetch(
+      `/api/admin/results?q=${encodeURIComponent(secondClientId.slice(0, 8))}`,
+      {
+        headers: {
+          Origin: ALLOWED_ORIGIN,
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+        },
+      }
+    );
+    const searchDashboard = await readJson(searchResponse);
+    expect(searchDashboard.summary.total).toBe(1);
+    expect(searchDashboard.results[0].clientId).toBe(secondClientId);
+  });
+
+  it("rejects invalid dashboard filters", async () => {
+    const hasAuth = {
+      Origin: ALLOWED_ORIGIN,
+      Authorization: `Bearer ${ADMIN_TOKEN}`,
+    };
+    expect((await apiFetch("/api/admin/results?page=0", { headers: hasAuth })).status).toBe(400);
+    expect(
+      (await apiFetch("/api/admin/results?from=2026-02-30", { headers: hasAuth })).status
+    ).toBe(400);
+    expect(
+      (
+        await apiFetch("/api/admin/results?from=2026-11-10&to=2026-11-09", {
+          headers: hasAuth,
+        })
+      ).status
+    ).toBe(400);
+  });
+});
+
 describe("health", () => {
   it("reports the shared test version", async () => {
     const response = await apiFetch("/api/health");

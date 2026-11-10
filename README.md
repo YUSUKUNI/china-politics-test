@@ -10,7 +10,7 @@
 2. 前端调用 `POST /api/results`，通过 `X-Client-Id` 请求头发送匿名标识、60 个答案和每题的重要题标记。
 3. Worker 校验版本、同意信息、答案和重要题标记，并使用 `questionnaire.js` 重新计算八轴分数。
 4. 结果写入 D1 的 `results` 表；`(client_id, test_version)` 唯一约束保证同一浏览器每个版本只入库一次。
-5. `admin.html` 使用管理令牌下载 CSV。不会从公开页面链接该管理页面。
+5. `admin.html` 是受管理令牌保护的数据后台，可查看提交概况、八轴倾向、每日趋势、重点题排行和逐份答卷，并导出完整 CSV。不会从公开页面链接该管理页面。
 
 Cloudflare 免费域名（`workers.dev`）和 GitHub Pages 在中国大陆的访问稳定性不作保证。若以后有正式域名，只需更新 Worker 的 `ALLOWED_ORIGINS` 和 `api-config.js`。
 
@@ -157,6 +157,10 @@ Authorization: Bearer <ADMIN_EXPORT_TOKEN>
 
 CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、耗时、`importance_count`、八轴分数、各轴百分比、`q01` 至 `q60` 的数值答案，以及 `important_q01` 至 `important_q60` 的 `0/1` 标记。
 
+### `GET /api/admin/results`
+
+请求头与 CSV 导出相同，必须携带 `Authorization: Bearer <ADMIN_EXPORT_TOKEN>`。支持 `page`、`pageSize`、`version`、`from`、`to` 和 `q` 查询参数，返回汇总指标、八轴均值与范围、最近每日趋势、重点题排行、版本分布、分页后的答卷列表和逐题答案。管理页面 `admin.html` 通过该接口加载数据。
+
 ### `GET /api/health`
 
 返回 Worker 所使用的测试版本，用于部署后的基本检查。
@@ -165,7 +169,7 @@ CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、
 
 - D1 数据独立于 Worker 部署，重新部署 Worker 不会清空结果。
 - Cloudflare D1 Time Travel 可恢复最近 30 天内的数据。
-- 每个收集阶段结束前，应从 `admin.html` 下载完整 CSV，并在 Git 仓库之外另行保存。
+- 每个收集阶段结束前，应从 `admin.html` 下载完整 CSV，并在 Git 仓库之外另行保存。后台登录令牌只保存在当前标签页，不写入 URL 或浏览器长期存储。
 - 数据库、CSV、`.dev.vars` 和管理令牌不得提交到 Git。
 - Cloudflare 控制台也可以直接查询 D1；这是辅助方式，不替代离线备份。
 
