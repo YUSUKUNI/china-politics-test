@@ -23,9 +23,10 @@ const INSERT_RESULT_SQL = `
     completed_at,
     duration_ms,
     answers_json,
+    importance_json,
     scores_json,
     percentages_json
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 const SELECT_RESULT_BY_CLIENT_SQL = `
   SELECT created_at
@@ -42,6 +43,7 @@ const SELECT_RESULTS_PAGE_SQL = `
     completed_at,
     duration_ms,
     answers_json,
+    importance_json,
     scores_json,
     percentages_json,
     created_at
@@ -148,6 +150,7 @@ async function handleResults(request, env, allowedOrigin) {
         payload.completedAt,
         payload.durationMs,
         JSON.stringify(payload.answers),
+        JSON.stringify(payload.importantQuestions),
         JSON.stringify(payload.scores),
         JSON.stringify(payload.percentages)
       )

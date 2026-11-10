@@ -69,9 +69,22 @@
       throw new HttpError(400, "invalid_answers", "答题数据不完整或格式不正确。");
     }
 
+    if (
+      !Array.isArray(body.importantQuestions) ||
+      body.importantQuestions.length !== questions.length ||
+      body.importantQuestions.some((important) => typeof important !== "boolean")
+    ) {
+      throw new HttpError(
+        400,
+        "invalid_important_questions",
+        "重要题标记数据不完整或格式不正确。"
+      );
+    }
+
     const answers = body.answers.slice();
-    const scores = calculateScores(answers);
-    const percentages = calculateAxisPercentages(scores);
+    const importantQuestions = body.importantQuestions.slice();
+    const scores = calculateScores(answers, importantQuestions);
+    const percentages = calculateAxisPercentages(scores, importantQuestions);
     const startedAt = parseTimestamp(body.startedAt, "startedAt");
     const completedAt = parseTimestamp(body.completedAt, "completedAt");
     const elapsedMs = Date.parse(completedAt) - Date.parse(startedAt);
@@ -97,6 +110,7 @@
       testVersion: meta.testVersion,
       consentVersion: meta.consentVersion,
       answers,
+      importantQuestions,
       scores,
       percentages,
       startedAt,
@@ -123,6 +137,7 @@
       "completed_at",
       "duration_ms",
       "created_at",
+      "importance_count",
     ];
 
     questionnaire.axes.forEach((axis) => {
@@ -131,6 +146,10 @@
 
     questionnaire.questions.forEach((_question, index) => {
       headers.push(`q${String(index + 1).padStart(2, "0")}`);
+    });
+
+    questionnaire.questions.forEach((_question, index) => {
+      headers.push(`important_q${String(index + 1).padStart(2, "0")}`);
     });
 
     return headers.join(",");
@@ -148,6 +167,12 @@
     const scores = parseStoredJson(record.scores_json, {});
     const percentages = parseStoredJson(record.percentages_json, {});
     const answers = parseStoredJson(record.answers_json, []);
+    const importantQuestions = parseStoredJson(record.importance_json, []);
+    const importanceCount = questionnaire.questions.reduce(
+      (count, _question, index) =>
+        count + (importantQuestions[index] === true ? 1 : 0),
+      0
+    );
     const fields = [
       record.result_id,
       record.client_id,
@@ -157,6 +182,7 @@
       record.completed_at,
       record.duration_ms,
       record.created_at,
+      importanceCount,
     ];
 
     questionnaire.axes.forEach((axis) => {
@@ -165,6 +191,10 @@
 
     questionnaire.questions.forEach((_question, index) => {
       fields.push(Number.isInteger(answers[index]) ? answers[index] : "");
+    });
+
+    questionnaire.questions.forEach((_question, index) => {
+      fields.push(importantQuestions[index] === true ? 1 : 0);
     });
 
     return fields.map(csvCell).join(",");

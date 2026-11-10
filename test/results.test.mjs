@@ -16,6 +16,7 @@ function makePayload(overrides = {}) {
     consent: true,
     consentVersion: questionnaire.meta.consentVersion,
     answers: new Array(questionnaire.questions.length).fill(2),
+    importantQuestions: new Array(questionnaire.questions.length).fill(false),
     startedAt: "2026-11-10T10:00:00.000Z",
     completedAt: "2026-11-10T10:08:00.000Z",
     durationMs: 480000,
@@ -27,7 +28,8 @@ describe("questionnaire and result validation", () => {
   it("keeps the current 60-question version", () => {
     expect(questionnaire.questions).toHaveLength(60);
     expect(questionnaire.axes).toHaveLength(8);
-    expect(questionnaire.meta.testVersion).toBe("2026-11-10");
+    expect(questionnaire.meta.testVersion).toBe("2026-11-10.1");
+    expect(questionnaire.meta.importanceMultiplier).toBe(1.5);
     expect(questionnaire.axes.map((axis) => axis.key)).toEqual([
       "government",
       "income",
@@ -45,11 +47,15 @@ describe("questionnaire and result validation", () => {
     const result = validateResultPayload(payload, questionnaire);
 
     expect(result.answers).toEqual(payload.answers);
+    expect(result.importantQuestions).toEqual(payload.importantQuestions);
     expect(result.scores).toEqual(
-      questionnaire.calculateScores(payload.answers)
+      questionnaire.calculateScores(payload.answers, payload.importantQuestions)
     );
     expect(result.percentages).toEqual(
-      questionnaire.calculateAxisPercentages(result.scores)
+      questionnaire.calculateAxisPercentages(
+        result.scores,
+        payload.importantQuestions
+      )
     );
     expect(result.scores.government).not.toBe(9999);
   });
@@ -85,12 +91,53 @@ describe("questionnaire and result validation", () => {
     expect(percentageFor(48, 0).gender).toBeGreaterThan(0);
   });
 
+  it("boosts marked questions without changing the percentage scale", () => {
+    const answers = new Array(questionnaire.questions.length).fill(2);
+    answers[0] = 0;
+    answers[1] = 4;
+    const importantQuestions = new Array(questionnaire.questions.length).fill(false);
+
+    const baseScores = questionnaire.calculateScores(
+      answers,
+      importantQuestions
+    );
+    const basePercentages =
+      questionnaire.calculateAxisPercentages(baseScores, importantQuestions);
+
+    importantQuestions[0] = true;
+    const boostedScores = questionnaire.calculateScores(
+      answers,
+      importantQuestions
+    );
+    const boostedPercentages =
+      questionnaire.calculateAxisPercentages(boostedScores, importantQuestions);
+
+    expect(boostedScores.government).toBeGreaterThan(baseScores.government);
+    expect(boostedPercentages.government).toBe(
+      Math.round(
+        (boostedScores.government /
+          (questionnaire.meta.importanceMultiplier * 2 * 2 + 23 * 2)) *
+          100
+      )
+    );
+    expect(boostedPercentages.government).toBeGreaterThan(
+      basePercentages.government
+    );
+    Object.values(boostedPercentages).forEach((percentage) => {
+      expect(percentage).toBeGreaterThanOrEqual(-100);
+      expect(percentage).toBeLessThanOrEqual(100);
+    });
+  });
+
   it.each([
     ["wrong version", { testVersion: "old-version" }, "version_mismatch"],
     ["missing consent", { consent: false }, "consent_required"],
     ["wrong consent version", { consentVersion: "old-version" }, "consent_required"],
     ["short answers", { answers: new Array(59).fill(2) }, "invalid_answers"],
     ["invalid option", { answers: [5, ...new Array(59).fill(2)] }, "invalid_answers"],
+    ["missing importance", { importantQuestions: undefined }, "invalid_important_questions"],
+    ["short importance", { importantQuestions: new Array(59).fill(false) }, "invalid_important_questions"],
+    ["invalid importance value", { importantQuestions: [1, ...new Array(59).fill(false)] }, "invalid_important_questions"],
     ["invalid timestamp", { startedAt: "not-a-date" }, "invalid_timestamp"],
     ["reversed timestamps", {
       startedAt: "2026-11-10T10:10:00.000Z",
@@ -118,6 +165,11 @@ describe("CSV export", () => {
       completed_at: "2026-11-10T10:08:00.000Z",
       duration_ms: 480000,
       answers_json: JSON.stringify(new Array(60).fill(2)),
+      importance_json: JSON.stringify([
+        true,
+        ...new Array(58).fill(false),
+        true,
+      ]),
       scores_json: JSON.stringify({ government: 1 }),
       percentages_json: JSON.stringify({ government: 10 }),
       created_at: "2026-11-10T10:08:01.000Z",
@@ -131,7 +183,14 @@ describe("CSV export", () => {
     expect(header).toContain("q01");
     expect(header).toContain("score_gender,percentage_gender");
     expect(header).toContain("q60");
+    expect(header).toContain("importance_count");
+    expect(header).toContain("important_q01");
+    expect(header).toContain("important_q60");
     expect(row).toContain("result-1,client-1");
+    const fields = row.split(",");
+    expect(fields[8]).toBe("2");
+    expect(fields.at(-60)).toBe("1");
+    expect(fields.at(-1)).toBe("1");
     expect(document.startsWith("\uFEFF")).toBe(true);
     expect(document.split("\r\n")).toHaveLength(3);
   });

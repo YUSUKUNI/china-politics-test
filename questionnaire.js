@@ -8,8 +8,9 @@
   "use strict";
 
   const meta = {
-    testVersion: "2026-11-10",
+    testVersion: "2026-11-10.1",
     consentVersion: "2026-10-29",
+    importanceMultiplier: 1.5,
   };
 
   const options = [
@@ -342,6 +343,9 @@
   if (options.length !== 5) {
     throw new Error("Questionnaire must contain exactly five options.");
   }
+  if (!Number.isFinite(meta.importanceMultiplier) || meta.importanceMultiplier < 1) {
+    throw new Error("Questionnaire importance multiplier must be at least 1.");
+  }
 
   questions.forEach((question, index) => {
     if (!question.section || !question.text) {
@@ -361,7 +365,7 @@
     });
   });
 
-  function calculateScores(answers) {
+  function calculateScores(answers, importantQuestions = []) {
     const scores = {};
     axes.forEach((axis) => {
       scores[axis.key] = 0;
@@ -379,22 +383,28 @@
       }
 
       const value = option[1];
+      const importanceFactor =
+        importantQuestions[questionIndex] === true ? meta.importanceMultiplier : 1;
       Object.entries(question.effects).forEach(([axisKey, weight]) => {
-        scores[axisKey] += value * weight;
+        scores[axisKey] += value * weight * importanceFactor;
       });
     });
 
     return scores;
   }
 
-  function calculateAxisPercentages(scores) {
+  function calculateAxisPercentages(scores, importantQuestions = []) {
     const percentages = {};
 
     axes.forEach((axis) => {
       let max = 0;
-      questions.forEach((question) => {
+      questions.forEach((question, questionIndex) => {
         if (question.effects[axis.key]) {
-          max += Math.abs(question.effects[axis.key]) * 2;
+          const importanceFactor =
+            importantQuestions[questionIndex] === true
+              ? meta.importanceMultiplier
+              : 1;
+          max += Math.abs(question.effects[axis.key]) * 2 * importanceFactor;
         }
       });
 

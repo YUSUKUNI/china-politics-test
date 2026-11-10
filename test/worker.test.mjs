@@ -13,6 +13,7 @@ function makePayload(overrides = {}) {
     consent: true,
     consentVersion: questionnaire.meta.consentVersion,
     answers: new Array(60).fill(2),
+    importantQuestions: new Array(60).fill(false),
     startedAt: "2026-11-10T10:00:00.000Z",
     completedAt: "2026-11-10T10:08:00.000Z",
     durationMs: 480000,
@@ -80,7 +81,9 @@ describe("CORS", () => {
 describe("result API", () => {
   it("stores one valid submission and reports client status", async () => {
     const clientId = crypto.randomUUID();
-    const payload = makePayload();
+    const importantQuestions = new Array(60).fill(false);
+    importantQuestions[20] = true;
+    const payload = makePayload({ importantQuestions });
 
     const before = await apiFetch("/api/client-status", {
       headers: { Origin: ALLOWED_ORIGIN, "X-Client-Id": clientId },
@@ -95,19 +98,21 @@ describe("result API", () => {
     expect(created.headers.get("Access-Control-Allow-Origin")).toBe(ALLOWED_ORIGIN);
 
     const row = await env.DB.prepare(
-      "SELECT answers_json, scores_json, percentages_json FROM results WHERE client_id = ?"
+      "SELECT answers_json, importance_json, scores_json, percentages_json FROM results WHERE client_id = ?"
     )
       .bind(clientId)
       .first();
     expect(JSON.parse(row.answers_json)).toEqual(payload.answers);
+    expect(JSON.parse(row.importance_json)).toEqual(payload.importantQuestions);
     expect(JSON.parse(row.scores_json)).toEqual(
-      questionnaire.calculateScores(payload.answers)
+      questionnaire.calculateScores(payload.answers, payload.importantQuestions)
     );
     expect(JSON.parse(row.percentages_json)).toEqual(
       JSON.parse(
         JSON.stringify(
           questionnaire.calculateAxisPercentages(
-            questionnaire.calculateScores(payload.answers)
+            questionnaire.calculateScores(payload.answers, payload.importantQuestions),
+            payload.importantQuestions
           )
         )
       )
@@ -174,6 +179,9 @@ describe("result API", () => {
     ["missing consent", makePayload({ consent: false }), crypto.randomUUID(), 400],
     ["short answers", makePayload({ answers: [2] }), crypto.randomUUID(), 400],
     ["invalid option", makePayload({ answers: [5, ...new Array(59).fill(2)] }), crypto.randomUUID(), 400],
+    ["missing importance", makePayload({ importantQuestions: undefined }), crypto.randomUUID(), 400],
+    ["short importance", makePayload({ importantQuestions: [true] }), crypto.randomUUID(), 400],
+    ["invalid importance value", makePayload({ importantQuestions: [1, ...new Array(59).fill(false)] }), crypto.randomUUID(), 400],
     ["invalid timestamp", makePayload({ startedAt: "bad" }), crypto.randomUUID(), 400],
   ])("rejects %s", async (_name, payload, clientId, expectedStatus) => {
     const response = await submit(payload, clientId);
@@ -235,6 +243,9 @@ describe("admin CSV export", () => {
     expect(csv).toContain("score_gender,percentage_gender");
     expect(csv).toContain("q01");
     expect(csv).toContain("q60");
+    expect(csv).toContain("importance_count");
+    expect(csv).toContain("important_q01");
+    expect(csv).toContain("important_q60");
     expect(csv).toContain(clientId);
   });
 });

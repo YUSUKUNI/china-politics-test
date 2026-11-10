@@ -29,7 +29,7 @@ const databasePath = process.env.DB_PATH
 
 const TEST_VERSION = meta.testVersion;
 const CONSENT_VERSION = meta.consentVersion;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const CLIENT_COOKIE_NAME = "political_test_client";
 const CLIENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -51,9 +51,10 @@ const insertResult = database.prepare(`
     completed_at,
     duration_ms,
     answers_json,
+    importance_json,
     scores_json,
     percentages_json
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 function initializeDatabase() {
@@ -82,6 +83,7 @@ function initializeDatabase() {
       completed_at TEXT NOT NULL,
       duration_ms INTEGER NOT NULL,
       answers_json TEXT NOT NULL,
+      importance_json TEXT NOT NULL DEFAULT '[]',
       scores_json TEXT NOT NULL,
       percentages_json TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -91,6 +93,18 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_results_created_at ON results(created_at);
     PRAGMA user_version = ${SCHEMA_VERSION};
   `);
+
+  ensureImportanceColumn();
+}
+
+function ensureImportanceColumn() {
+  const columns = database.prepare("PRAGMA table_info(results)").all();
+  if (!columns.some((column) => column.name === "importance_json")) {
+    database.exec(
+      "ALTER TABLE results ADD COLUMN importance_json TEXT NOT NULL DEFAULT '[]';"
+    );
+    console.log("已为结果表增加重要题标记字段。");
+  }
 }
 
 function isLegacyResultsSchema(sql) {
@@ -121,6 +135,7 @@ function migrateLegacyResultsTable() {
         completed_at TEXT NOT NULL,
         duration_ms INTEGER NOT NULL,
         answers_json TEXT NOT NULL,
+        importance_json TEXT NOT NULL DEFAULT '[]',
         scores_json TEXT NOT NULL,
         percentages_json TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -328,6 +343,7 @@ async function handleResultSubmission(request, response) {
       payload.completedAt,
       payload.durationMs,
       JSON.stringify(payload.answers),
+      JSON.stringify(payload.importantQuestions),
       JSON.stringify(payload.scores),
       JSON.stringify(payload.percentages)
     );

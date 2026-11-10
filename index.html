@@ -231,6 +231,55 @@ h1 {
   border-left: 4px solid var(--primary);
 }
 
+.importance-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -6px 0 20px;
+}
+
+.importance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1.5px solid #f59e0b;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.importance-btn:hover {
+  background: #fef3c7;
+}
+
+.importance-btn.active {
+  background: #d97706;
+  border-color: #d97706;
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(217, 119, 6, 0.22);
+}
+
+.importance-btn:focus-visible {
+  outline: 3px solid rgba(245, 158, 11, 0.35);
+  outline-offset: 2px;
+}
+
+.importance-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.importance-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .options-container {
   display: flex;
   flex-direction: column;
@@ -307,6 +356,17 @@ h1 {
   font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: 22px;
+}
+
+.importance-summary {
+  margin: -8px 0 22px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.86rem;
+  line-height: 1.6;
 }
 
 .save-status {
@@ -535,6 +595,7 @@ footer {
     </p>
     <ul class="instruction-list">
       <li><strong>题目数量</strong>：共 60 道情景命题。</li>
+      <li><strong>重要题加成</strong>：每道题都可以标记为“非常重要”；标记后该题权重按 1.5 倍计入。</li>
       <li><strong>作答方式</strong>：每题根据第一直觉，在 5 个选项中选择最符合你想法的一项。</li>
       <li><strong>结果呈现</strong>：展示你在 8 个维度上的坐标位置，并给出对应方向的相对倾向。</li>
     </ul>
@@ -561,6 +622,14 @@ footer {
     <div id="q-title" class="question-title">题目加载中...</div>
     <div id="q-text" class="question-text">题干加载中...</div>
 
+    <div class="importance-row">
+      <button type="button" id="important-btn" class="importance-btn" aria-pressed="false">
+        <span class="importance-icon" aria-hidden="true">★</span>
+        <span id="important-btn-label">我觉得非常重要</span>
+      </button>
+      <span id="importance-hint" class="importance-hint">标记后本题权重 ×1.5</span>
+    </div>
+
     <div id="options-container" class="options-container"></div>
 
     <div class="nav-actions">
@@ -576,6 +645,8 @@ footer {
     </div>
 
     <p class="result-lead">左右方向只是本测试设定的坐标方向，不代表好坏。点越靠近哪一侧，表示在本测试的设定下越接近该方向。</p>
+
+    <div id="importance-summary" class="importance-summary hide" role="status"></div>
 
     <div id="save-status" class="save-status hide" role="status" aria-live="polite"></div>
 
@@ -617,9 +688,14 @@ const consentCheckbox=document.getElementById("consent-checkbox");
 const startButton=document.getElementById("start-btn");
 const clientStatusNote=document.getElementById("client-status-note");
 const saveStatusBox=document.getElementById("save-status");
+const importantButton=document.getElementById("important-btn");
+const importantButtonLabel=document.getElementById("important-btn-label");
+const importanceHint=document.getElementById("importance-hint");
+const importanceSummary=document.getElementById("importance-summary");
 
 let currentIndex=0;
 let selectedAnswers=new Array(questions.length).fill(null);
+let importantQuestions=new Array(questions.length).fill(false);
 let advanceTimer=null;
 let startedAt=null;
 let submissionInFlight=false;
@@ -661,6 +737,8 @@ function apiUrl(path){
 document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>
   `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">${option[0]}</button>`
 ).join("");
+importanceHint.textContent=`标记后本题权重 ×${meta.importanceMultiplier}`;
+importantButton.addEventListener("click",toggleImportance);
 startButton.addEventListener("click",startTest);
 consentCheckbox.addEventListener("change",()=>{
   startButton.disabled=!consentCheckbox.checked;
@@ -679,6 +757,7 @@ function startTest(){
   clearTimeout(advanceTimer);
   currentIndex=0;
   selectedAnswers=new Array(questions.length).fill(null);
+  importantQuestions=new Array(questions.length).fill(false);
   startedAt=new Date();
   submissionInFlight=false;
   resultSaved=false;
@@ -697,6 +776,7 @@ function renderQuestion(){
   document.getElementById("q-percent").textContent=`${percent}%`;
   document.getElementById("q-title").textContent=`${question.section} · 第 ${currentIndex+1} 题`;
   document.getElementById("q-text").textContent=question.text;
+  renderImportanceButton();
 
   const selected=selectedAnswers[currentIndex];
   document.querySelectorAll(".option-btn").forEach((button,optionIndex)=>{
@@ -707,6 +787,18 @@ function renderQuestion(){
   const nextButton=document.getElementById("next-btn");
   nextButton.textContent=currentIndex===questions.length-1?"查看结果 →":"下一题 →";
   nextButton.disabled=selected===null||selected===undefined;
+}
+
+function renderImportanceButton(){
+  const isImportant=importantQuestions[currentIndex]===true;
+  importantButton.classList.toggle("active",isImportant);
+  importantButton.setAttribute("aria-pressed",String(isImportant));
+  importantButtonLabel.textContent=isImportant?"已标记：非常重要":"我觉得非常重要";
+}
+
+function toggleImportance(){
+  importantQuestions[currentIndex]=!importantQuestions[currentIndex];
+  renderImportanceButton();
 }
 
 function selectOption(optionIndex){
@@ -749,8 +841,16 @@ function nextQuestion(){
 }
 
 function showResults(){
-  const scores=calculateAnswerScores(selectedAnswers);
-  const percentages=getAxisPercentages(scores);
+  const scores=calculateAnswerScores(selectedAnswers,importantQuestions);
+  const percentages=getAxisPercentages(scores,importantQuestions);
+  const importantCount=importantQuestions.filter(Boolean).length;
+  if(importantCount>0){
+    importanceSummary.textContent=`已将 ${importantCount} 道题标记为“非常重要”；这些题按 ${meta.importanceMultiplier} 倍权重计入结果。`;
+    importanceSummary.classList.remove("hide");
+  }else{
+    importanceSummary.textContent="";
+    importanceSummary.classList.add("hide");
+  }
   renderAxes(percentages);
   pendingResultPayload=buildResultPayload();
   showScreen("result");
@@ -799,6 +899,7 @@ function buildResultPayload(){
     consent:true,
     consentVersion:CONSENT_VERSION,
     answers:selectedAnswers.slice(),
+    importantQuestions:importantQuestions.slice(),
     startedAt:safeStartedAt.toISOString(),
     completedAt:completedAt.toISOString(),
     durationMs:Math.max(0,completedAt.getTime()-safeStartedAt.getTime())
