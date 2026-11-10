@@ -2,17 +2,23 @@
 
 中国政治立场测试网站，当前包含 60 道题和 8 个坐标轴。题目分为财政问题、社会制度、税收、政治制度、民族文化、地缘外交、扩展题组、性别议题和公共政策九个部分。每题可以标记为“非常重要”，标记后该题权重按 `1.5` 倍计入。
 
-线上方案采用 GitHub Pages 静态前端 + Cloudflare Worker API + Cloudflare D1 数据库，不需要维护长期运行的服务器。前端只提交原始答案和重要题标记，Worker 使用共享题库重新计分后写入 D1。
+线上方案采用 GitHub Pages 静态前端 + Cloudflare Pages Functions API + Cloudflare D1 数据库，不需要维护长期运行的服务器。前端只提交原始答案和重要题标记，服务端使用共享题库重新计分后写入 D1。`worker/index.mjs` 同时提供 Cloudflare Worker 备用入口。
 
 ## 线上数据流
 
 1. 页面从 GitHub Pages 加载，浏览器在 `localStorage` 中保存一个匿名 UUID。
 2. 前端调用 `POST /api/results`，通过 `X-Client-Id` 请求头发送匿名标识、60 个答案和每题的重要题标记。
-3. Worker 校验版本、同意信息、答案和重要题标记，并使用 `questionnaire.js` 重新计算八轴分数。
+3. 服务端校验版本、同意信息、答案和重要题标记，并使用 `questionnaire.js` 重新计算八轴分数。
 4. 结果写入 D1 的 `results` 表；`(client_id, test_version)` 唯一约束保证同一浏览器每个版本只入库一次。
 5. `admin.html` 是受管理令牌保护的数据后台，可查看提交概况、八轴倾向、每日趋势、重点题排行和逐份答卷，并导出完整 CSV。不会从公开页面链接该管理页面。
 
-Cloudflare 免费域名（`workers.dev`）和 GitHub Pages 在中国大陆的访问稳定性不作保证。若以后有正式域名，只需更新 Worker 的 `ALLOWED_ORIGINS` 和 `api-config.js`。
+当前线上地址：
+
+- 测试页面：`https://yusukuni.github.io/china-politics-test/`
+- 管理后台：`https://yusukuni.github.io/china-politics-test/admin.html`
+- 数据接口：`https://china-politics-test-data.pages.dev`
+
+当前网络下 `pages.dev` 可正常访问，而 `workers.dev` 会被拦截，因此线上正式数据入口使用 Pages。若以后有正式域名，只需更新 `ALLOWED_ORIGINS` 和 `api-config.js`。
 
 ## 本地运行
 
@@ -58,52 +64,71 @@ npm run dev:worker
 
 `.dev.vars` 已忽略，不能提交。Worker 默认监听 `http://127.0.0.1:8787`。
 
-## 首次部署
+## 部署与更新
+
+### Cloudflare Pages API（当前正式入口）
 
 1. 创建或登录 Cloudflare 免费账号，并执行 `npx wrangler login`。
-2. 创建 D1 数据库：
+2. 首次部署时创建 D1 数据库：
 
 ```powershell
 npx wrangler d1 create china-politics-test-results
 ```
 
-3. 将命令输出的 `database_id` 写入 `wrangler.jsonc`，替换全零占位值。
+3. 将命令输出的 `database_id` 同时写入 `wrangler.jsonc` 和 `cloudflare-pages/wrangler.jsonc`。
 4. 应用远程 migration：
 
 ```powershell
 npm run db:migrate:remote
 ```
 
-已有 D1 数据库必须在部署新版 Worker 前执行 migration；`0002` 会新增 `importance_json` 字段。
+已有 D1 数据库必须在部署新版服务端前执行 migration；`0002` 会新增 `importance_json` 字段。
 
-5. 生成并设置管理令牌：
-
-```powershell
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-npx wrangler secret put ADMIN_EXPORT_TOKEN
-```
-
-6. 部署 Worker：
+5. 首次部署时创建 Pages 项目：
 
 ```powershell
-npm run deploy
+npx wrangler pages project create china-politics-test-data --production-branch main
 ```
 
-7. 将输出中的 Worker 地址填入 `api-config.js` 的 `apiBase`，例如：
+6. 设置 Pages 管理令牌。令牌生成后只保存在本机 `.data/admin-token.txt` 或密码管理器中，不能提交到 Git：
+
+```powershell
+$token = (Get-Content .data/admin-token.txt -Raw).Trim()
+$token | npx wrangler pages secret put ADMIN_EXPORT_TOKEN --project-name china-politics-test-data
+```
+
+7. 部署或更新 Pages API：
+
+```powershell
+npm run deploy:pages
+```
+
+8. `api-config.js` 的 `apiBase` 必须指向实际接口地址。当前配置为：
 
 ```js
 globalThis.POLITICS_TEST_CONFIG = {
-  apiBase: "https://china-politics-test-api.example.workers.dev",
+  apiBase: "https://china-politics-test-data.pages.dev",
 };
 ```
 
-8. 提交并推送 `api-config.js`。GitHub Pages 更新后，公开测试页会把结果写入 D1。
+9. 提交并推送前端文件。GitHub Pages 更新后，公开测试页会把结果写入 D1。
+
+### Cloudflare Worker（备用入口）
+
+同一份服务端代码也可以通过 Worker 部署。首次部署需单独设置 Worker Secret：
+
+```powershell
+Get-Content .data/admin-token.txt | npx wrangler secret put ADMIN_EXPORT_TOKEN
+npm run deploy
+```
+
+若切换 Worker 地址，必须同步修改 `api-config.js`。免费 `workers.dev` 域名是否可访问取决于所在网络。
 
 ### CORS 配置
 
-生产环境只允许 `https://yusukuni.github.io`，配置位于 `wrangler.jsonc` 的 `ALLOWED_ORIGINS`。需要允许多个来源时使用英文逗号分隔。本地测试可在 `.dev.vars` 中覆盖该变量。
+生产环境只允许 GitHub Pages 和 Pages API 自身来源。Pages 的配置位于 `cloudflare-pages/wrangler.jsonc`，Worker 备用入口的配置位于 `wrangler.jsonc` 的 `ALLOWED_ORIGINS`。需要允许多个来源时使用英文逗号分隔。本地测试可在 `.dev.vars` 中覆盖该变量。
 
-如果 GitHub Pages 地址变化，必须同时更新 `ALLOWED_ORIGINS` 并重新部署 Worker。
+如果 GitHub Pages 地址变化，必须同时更新两处 `ALLOWED_ORIGINS`，并分别重新部署 Pages 和 Worker。
 
 ## 接口
 
@@ -163,11 +188,11 @@ CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、
 
 ### `GET /api/health`
 
-返回 Worker 所使用的测试版本，用于部署后的基本检查。
+返回服务端所使用的测试版本，用于部署后的基本检查。
 
 ## 数据与备份
 
-- D1 数据独立于 Worker 部署，重新部署 Worker 不会清空结果。
+- D1 数据独立于 Pages 和 Worker 部署，重新部署不会清空结果。
 - Cloudflare D1 Time Travel 可恢复最近 30 天内的数据。
 - 每个收集阶段结束前，应从 `admin.html` 下载完整 CSV，并在 Git 仓库之外另行保存。后台登录令牌只保存在当前标签页，不写入 URL 或浏览器长期存储。
 - 数据库、CSV、`.dev.vars` 和管理令牌不得提交到 Git。

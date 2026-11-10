@@ -14,7 +14,7 @@
     {
       "binding": "DB",
       "database_name": "china-politics-test-results",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "8f61d50c-4181-464b-b6cf-67c61be0e525",
       "migrations_dir": "worker/migrations"
     }
   ]

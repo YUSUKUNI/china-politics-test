@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "china-politics-test-data",
+  "pages_build_output_dir": "public",
+  "compatibility_date": "2026-11-03",
+  "vars": {
+    "ALLOWED_ORIGINS": "https://yusukuni.github.io,https://china-politics-test-data.pages.dev,http://127.0.0.1:8788,http://localhost:8788"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "china-politics-test-results",
+      "database_id": "8f61d50c-4181-464b-b6cf-67c61be0e525",
+      "migrations_dir": "../worker/migrations"
+    }
+  ]
+}

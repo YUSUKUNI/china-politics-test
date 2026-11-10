@@ -1,5 +1,3 @@
 globalThis.POLITICS_TEST_CONFIG = {
-  // After deploying the Worker, replace this empty string with the Worker
-  // base URL, for example: "https://china-politics-test-api.example.workers.dev".
-  apiBase: "",
+  apiBase: "https://china-politics-test-data.pages.dev",
 };
