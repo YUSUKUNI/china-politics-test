@@ -1,13 +1,13 @@
 # china-politics-test
 
-中国政治立场测试网站，当前包含 47 道题。原 30 题保持不变，新增 17 题位于“扩展题组”。
+中国政治立场测试网站，当前包含 60 道题和 8 个坐标轴。题目分为财政问题、社会制度、税收、政治制度、民族文化、地缘外交、扩展题组、性别议题和公共政策九个部分。
 
 线上方案采用 GitHub Pages 静态前端 + Cloudflare Worker API + Cloudflare D1 数据库，不需要维护长期运行的服务器。前端只提交原始答案，Worker 使用共享题库重新计分后写入 D1。
 
 ## 线上数据流
 
 1. 页面从 GitHub Pages 加载，浏览器在 `localStorage` 中保存一个匿名 UUID。
-2. 前端调用 `POST /api/results`，通过 `X-Client-Id` 请求头发送匿名标识和 47 个答案。
+2. 前端调用 `POST /api/results`，通过 `X-Client-Id` 请求头发送匿名标识和 60 个答案。
 3. Worker 校验版本、同意信息和答案，并使用 `questionnaire.js` 重新计算八轴分数。
 4. 结果写入 D1 的 `results` 表；`(client_id, test_version)` 唯一约束保证同一浏览器每个版本只入库一次。
 5. `admin.html` 使用管理令牌下载 CSV。不会从公开页面链接该管理页面。
@@ -118,17 +118,19 @@ X-Client-Id: <UUID>
 
 ```json
 {
-  "testVersion": "2026-11-03",
+  "testVersion": "2026-11-10",
   "consent": true,
   "consentVersion": "2026-10-29",
   "answers": [0, 1, 2, 3, 4],
-  "startedAt": "2026-11-03T10:00:00.000Z",
-  "completedAt": "2026-11-03T10:08:00.000Z",
+  "startedAt": "2026-11-10T10:00:00.000Z",
+  "completedAt": "2026-11-10T10:08:00.000Z",
   "durationMs": 480000
 }
 ```
 
-`answers` 必须是 47 个 `0` 到 `4` 的整数。成功返回 `201`；同版本重复提交返回 `409`；客户端上传的任何分数都会被忽略。
+`answers` 必须是 60 个 `0` 到 `4` 的整数。成功返回 `201`；同版本重复提交返回 `409`；客户端上传的任何分数都会被忽略。
+
+上例中的 `answers` 仅用于展示选项编码，实际请求必须包含完整的 60 项。
 
 ### `GET /api/client-status`
 
@@ -138,7 +140,7 @@ X-Client-Id: <UUID>
 {
   "submitted": false,
   "completedAt": null,
-  "testVersion": "2026-11-03"
+  "testVersion": "2026-11-10"
 }
 ```
 
@@ -150,7 +152,7 @@ X-Client-Id: <UUID>
 Authorization: Bearer <ADMIN_EXPORT_TOKEN>
 ```
 
-CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、耗时、八轴分数、各轴百分比，以及 `q01` 至 `q47` 的数值答案。
+CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、耗时、八轴分数、各轴百分比，以及 `q01` 至 `q60` 的数值答案。
 
 ### `GET /api/health`
 
@@ -169,8 +171,8 @@ CSV 的“受保护”依赖 HTTPS 和 `ADMIN_EXPORT_TOKEN`，不是额外的文
 ## 题库与版本
 
 - `questionnaire.js` 同时供浏览器、Node 和 Worker 使用，集中保存题目、八轴定义、选项和计分逻辑。
-- 当前测试版本为 `2026-11-03`，同意书版本为 `2026-10-29`。
-- 47 题完整题干、数组下标与八轴权重总表见 `docs/question-axis-weight-list.md`；扩展题设计说明见 `docs/new-question-axis-mapping.md`。分析不同版本数据时应按 `test_version` 分组。
+- 当前测试版本为 `2026-11-10`，同意书版本为 `2026-10-29`。
+- 60 题完整题干、数组下标与八轴权重总表见 `docs/question-axis-weight-list.md`；题库结构、方向校准和数据分析说明见 `docs/new-question-axis-mapping.md`。分析不同版本数据时应按 `test_version` 分组。
 
 ## 唯一标识限制
 

@@ -12,9 +12,9 @@ function makePayload(overrides = {}) {
     testVersion: questionnaire.meta.testVersion,
     consent: true,
     consentVersion: questionnaire.meta.consentVersion,
-    answers: new Array(47).fill(2),
-    startedAt: "2026-11-03T10:00:00.000Z",
-    completedAt: "2026-11-03T10:08:00.000Z",
+    answers: new Array(60).fill(2),
+    startedAt: "2026-11-10T10:00:00.000Z",
+    completedAt: "2026-11-10T10:08:00.000Z",
     durationMs: 480000,
     ...overrides,
   };
@@ -146,7 +146,7 @@ describe("result API", () => {
         "2026-10-29T10:00:00.000Z",
         "2026-10-29T10:08:00.000Z",
         480000,
-        JSON.stringify(new Array(47).fill(2)),
+        JSON.stringify(new Array(60).fill(2)),
         JSON.stringify({}),
         JSON.stringify({})
       )
@@ -173,7 +173,7 @@ describe("result API", () => {
     ["wrong version", makePayload({ testVersion: "old" }), crypto.randomUUID(), 400],
     ["missing consent", makePayload({ consent: false }), crypto.randomUUID(), 400],
     ["short answers", makePayload({ answers: [2] }), crypto.randomUUID(), 400],
-    ["invalid option", makePayload({ answers: [5, ...new Array(46).fill(2)] }), crypto.randomUUID(), 400],
+    ["invalid option", makePayload({ answers: [5, ...new Array(59).fill(2)] }), crypto.randomUUID(), 400],
     ["invalid timestamp", makePayload({ startedAt: "bad" }), crypto.randomUUID(), 400],
   ])("rejects %s", async (_name, payload, clientId, expectedStatus) => {
     const response = await submit(payload, clientId);
@@ -232,8 +232,9 @@ describe("admin CSV export", () => {
     expect(Array.from(csvBytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const csv = new TextDecoder().decode(csvBytes);
     expect(csv).toContain("score_government,percentage_government");
+    expect(csv).toContain("score_gender,percentage_gender");
     expect(csv).toContain("q01");
-    expect(csv).toContain("q47");
+    expect(csv).toContain("q60");
     expect(csv).toContain(clientId);
   });
 });
