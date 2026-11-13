@@ -516,6 +516,20 @@ async function loadAdminDashboard(db, filters) {
     aliasFilter.params
   ).all();
 
+  const questionTendencyPromise = bindOptional(
+    db.prepare(`
+      SELECT
+        CAST(j.key AS INTEGER) AS question_index,
+        CAST(j.value AS INTEGER) AS answer_index,
+        COUNT(*) AS count
+      FROM results r, json_each(r.answers_json) AS j
+      ${aliasFilter.sql}
+      GROUP BY CAST(j.key AS INTEGER), CAST(j.value AS INTEGER)
+      ORDER BY question_index ASC, answer_index ASC
+    `),
+    aliasFilter.params
+  ).all();
+
   const dailyPromise = bindOptional(
     db.prepare(`
       SELECT date(r.created_at, '+8 hours') AS day, COUNT(*) AS count
@@ -543,6 +557,7 @@ async function loadAdminDashboard(db, filters) {
     importanceSummary,
     axisSummary,
     topImportance,
+    questionTendencyRows,
     dailyRows,
     versionRows,
   ] = await Promise.all([
@@ -551,6 +566,7 @@ async function loadAdminDashboard(db, filters) {
     importancePromise,
     axisPromise,
     topImportancePromise,
+    questionTendencyPromise,
     dailyPromise,
     versionsPromise,
   ]);
@@ -613,6 +629,56 @@ async function loadAdminDashboard(db, filters) {
     maxPercentage: axisSummary?.[`max_${axis.key}`] ?? null,
   }));
 
+  const questionAnswerCounts = questionnaire.questions.map(() =>
+    new Array(questionnaire.options.length).fill(0)
+  );
+  (questionTendencyRows.results || []).forEach((row) => {
+    const questionIndex = Number(row.question_index);
+    const answerIndex = Number(row.answer_index);
+    const count = Number(row.count || 0);
+    if (
+      Number.isInteger(questionIndex) &&
+      questionAnswerCounts[questionIndex] &&
+      Number.isInteger(answerIndex) &&
+      answerIndex >= 0 &&
+      answerIndex < questionnaire.options.length
+    ) {
+      questionAnswerCounts[questionIndex][answerIndex] += count;
+    }
+  });
+
+  const questionTendencies = questionnaire.questions.map((question, index) => {
+    const optionCounts = questionAnswerCounts[index];
+    const sampleCount = optionCounts.reduce((sum, count) => sum + count, 0);
+    const supportCount = optionCounts[0] + optionCounts[1];
+    const neutralCount = optionCounts[2];
+    const opposeCount = optionCounts[3] + optionCounts[4];
+    const toPercentage = (count) =>
+      sampleCount ? Math.round((count / sampleCount) * 1000) / 10 : null;
+    const weightedPosition = optionCounts.reduce(
+      (sum, count, optionIndex) =>
+        sum + count * Number(questionnaire.options[optionIndex][1]),
+      0
+    );
+
+    return {
+      questionNumber: index + 1,
+      section: question.section,
+      text: question.text,
+      sampleCount,
+      optionCounts,
+      supportCount,
+      neutralCount,
+      opposeCount,
+      supportPercentage: toPercentage(supportCount),
+      neutralPercentage: toPercentage(neutralCount),
+      opposePercentage: toPercentage(opposeCount),
+      tendencyPercentage: sampleCount
+        ? Math.round((weightedPosition / (sampleCount * 2)) * 1000) / 10
+        : null,
+    };
+  });
+
   return {
     generatedAt: new Date().toISOString(),
     testVersion: TEST_VERSION,
@@ -624,6 +690,7 @@ async function loadAdminDashboard(db, filters) {
       lastSubmittedAt: summary?.last_submitted_at ?? null,
       importanceMarks: Number(importanceSummary?.importance_marks || 0),
       axes,
+      questionTendencies,
       daily: (dailyRows.results || []).slice().reverse().map((row) => ({
         date: row.day,
         count: Number(row.count || 0),

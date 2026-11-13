@@ -317,6 +317,21 @@ describe("admin dashboard", () => {
     expect(dashboard.summary.averageDurationMs).toBe(540000);
     expect(dashboard.summary.axes).toHaveLength(8);
     expect(dashboard.summary.axes.every((axis) => axis.averagePercentage !== null)).toBe(true);
+    expect(dashboard.summary.questionTendencies).toHaveLength(60);
+    expect(dashboard.summary.questionTendencies[0]).toMatchObject({
+      questionNumber: 1,
+      section: questionnaire.questions[0].section,
+      text: questionnaire.questions[0].text,
+      sampleCount: 2,
+      optionCounts: [1, 0, 1, 0, 0],
+      supportCount: 1,
+      neutralCount: 1,
+      opposeCount: 0,
+      supportPercentage: 50,
+      neutralPercentage: 50,
+      opposePercentage: 0,
+      tendencyPercentage: 50,
+    });
     expect(dashboard.summary.daily.length).toBeGreaterThan(0);
     expect(dashboard.summary.versions).toContainEqual(
       expect.objectContaining({
@@ -357,6 +372,13 @@ describe("admin dashboard", () => {
     const searchDashboard = await readJson(searchResponse);
     expect(searchDashboard.summary.total).toBe(1);
     expect(searchDashboard.results[0].clientId).toBe(secondClientId);
+    expect(searchDashboard.summary.questionTendencies[0]).toMatchObject({
+      sampleCount: 1,
+      supportPercentage: 100,
+      neutralPercentage: 0,
+      opposePercentage: 0,
+      tendencyPercentage: 100,
+    });
   });
 
   it("rejects invalid dashboard filters", async () => {
@@ -436,6 +458,11 @@ describe("admin dashboard", () => {
     expect(afterDelete.results.map((result) => result.resultId)).not.toContain(
       firstResult.resultId
     );
+    expect(afterDelete.summary.questionTendencies[0]).toMatchObject({
+      sampleCount: 1,
+      supportPercentage: 100,
+      tendencyPercentage: 100,
+    });
 
     const deletedAgain = await apiFetch(
       `/api/admin/results/${firstResult.resultId}`,
