@@ -293,10 +293,22 @@ h1 {
   font-size: 1rem;
   border-radius: 8px;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   text-align: center;
   transition: all 0.15s ease;
   font-weight: 500;
   color: #1e293b;
+}
+
+.option-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .option-btn:hover {
@@ -309,6 +321,10 @@ h1 {
   background: #eff6ff;
   color: var(--primary);
   font-weight: 600;
+}
+
+.option-btn.selected .option-hint {
+  color: #3b5f9e;
 }
 
 .nav-actions {
@@ -670,6 +686,7 @@ const {
   questions,
   calculateScores: calculateAnswerScores,
   calculateAxisPercentages: getAxisPercentages,
+  getOptionFiscalHint,
 } = globalThis.QUESTIONNAIRE;
 const TEST_VERSION=meta.testVersion;
 const CONSENT_VERSION=meta.consentVersion;
@@ -734,9 +751,6 @@ function apiUrl(path){
   return `${API_BASE}${path}`;
 }
 
-document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>
-  `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">${option[0]}</button>`
-).join("");
 importanceHint.textContent=`标记后本题权重 ×${meta.importanceMultiplier}`;
 importantButton.addEventListener("click",toggleImportance);
 startButton.addEventListener("click",startTest);
@@ -777,6 +791,7 @@ function renderQuestion(){
   document.getElementById("q-title").textContent=`${question.section} · 第 ${currentIndex+1} 题`;
   document.getElementById("q-text").textContent=question.text;
   renderImportanceButton();
+  renderOptions();
 
   const selected=selectedAnswers[currentIndex];
   document.querySelectorAll(".option-btn").forEach((button,optionIndex)=>{
@@ -787,6 +802,17 @@ function renderQuestion(){
   const nextButton=document.getElementById("next-btn");
   nextButton.textContent=currentIndex===questions.length-1?"查看结果 →":"下一题 →";
   nextButton.disabled=selected===null||selected===undefined;
+}
+
+function renderOptions(){
+  const question=questions[currentIndex];
+  document.getElementById("options-container").innerHTML=options.map((option,optionIndex)=>{
+    const hint=getOptionFiscalHint(question,optionIndex);
+    return `<button type="button" class="option-btn" onclick="selectOption(${optionIndex})">`
+      +`<span class="option-label">${option[0]}</span>`
+      +(hint?`<span class="option-hint">${hint}</span>`:"")
+      +"</button>";
+  }).join("");
 }
 
 function renderImportanceButton(){

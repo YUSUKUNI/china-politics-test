@@ -8,7 +8,7 @@
   "use strict";
 
   const meta = {
-    testVersion: "2026-11-10.1",
+    testVersion: "2026-11-13.1",
     consentVersion: "2026-10-29",
     importanceMultiplier: 1.5,
   };
@@ -26,10 +26,10 @@
     { key: "income", name: "经济分配", left: "偏高收入", right: "偏低收入" },
     { key: "social", name: "社会文化取向", left: "社会文化保守", right: "社会文化开放" },
     { key: "political", name: "政治制度", left: "权力集中", right: "政治开放" },
-    { key: "han", name: "民族文化", left: "多元文化", right: "大汉族主义" },
+    { key: "han", name: "民族文化", left: "多元民族文化", right: "汉民族文化" },
     { key: "peace", name: "外交军事", left: "武力主义", right: "和平主义" },
     { key: "west", name: "国际取向", left: "反欧美中心", right: "亲欧美" },
-    { key: "gender", name: "性别关系立场", left: "传统性别角色", right: "性别平等" },
+    { key: "gender", name: "性别立场", left: "利男", right: "利女" },
   ];
 
   const questions = [
@@ -42,6 +42,7 @@
       section: "财政问题",
       text: "你是否支持继续大基建拉动经济？",
       effects: { government: 2, income: 1 },
+      fiscalEffect: "increase",
     },
     {
       section: "财政问题",
@@ -147,6 +148,7 @@
       section: "民族文化",
       text: "你是否支持保护少数民族文化语言的专项政策（包括地方方言）？",
       effects: { han: -1.5, government: 0.5 },
+      fiscalEffect: "increase",
     },
     {
       section: "民族文化",
@@ -192,11 +194,13 @@
       section: "扩展题组",
       text: "你是否支持退休金政策对职工与城镇居民实行统一标准？",
       effects: { government: 0.5, income: 2 },
+      fiscalEffect: "increase",
     },
     {
       section: "扩展题组",
       text: "你是否支持医疗保险对职工与城镇居民建立统一标准？",
       effects: { government: 0.5, income: 2 },
+      fiscalEffect: "increase",
     },
     {
       section: "扩展题组",
@@ -232,11 +236,13 @@
       section: "扩展题组",
       text: "你是否支持中央政府为地方债务兜底？",
       effects: { government: 3, income: 1 },
+      fiscalEffect: "increase",
     },
     {
       section: "扩展题组",
       text: "你是否支持国家提供无偿对外援助，或承担可能亏损的对外援建项目？",
       effects: { government: 1 },
+      fiscalEffect: "increase",
     },
     {
       section: "扩展题组",
@@ -257,11 +263,12 @@
       section: "性别议题",
       text: "你是否支持在公共场所增加女性厕所的数量？",
       effects: { gender: 2, government: 1 },
+      fiscalEffect: "increase",
     },
     {
       section: "性别议题",
       text: "你是否支持结婚时由男方承担主要的彩礼和婚礼费用？",
-      effects: { gender: -3, social: -2 },
+      effects: { gender: 3, social: -2 },
     },
     {
       section: "性别议题",
@@ -276,7 +283,7 @@
     {
       section: "性别议题",
       text: "你是否支持对男性遭受性骚扰建立与女性相同的法律保护机制，并增设针对男性受害者的强奸罪规定，而不只是以猥亵罪处理？",
-      effects: { gender: 0.5, social: 1 },
+      effects: { gender: -0.5, social: 1 },
     },
     {
       section: "性别议题",
@@ -292,6 +299,7 @@
       section: "公共政策",
       text: "你是否支持政府增加育儿补贴，以减轻家庭生育和养育子女的经济负担？",
       effects: { government: 1, income: 1.5 },
+      fiscalEffect: "increase",
     },
     {
       section: "公共政策",
@@ -332,10 +340,12 @@
       section: "公共政策",
       text: "你是否支持减少对环境恶劣的少数民族地区的财政拨款？",
       effects: { han: 2, government: -1 },
+      fiscalEffect: "decrease",
     },
   ];
 
   const axisKeys = new Set(axes.map((axis) => axis.key));
+  const fiscalEffects = new Set(["increase", "decrease"]);
 
   if (!questions.length) {
     throw new Error("Questionnaire must contain at least one question.");
@@ -350,6 +360,12 @@
   questions.forEach((question, index) => {
     if (!question.section || !question.text) {
       throw new Error(`Question ${index} is missing section or text.`);
+    }
+    if (
+      question.fiscalEffect !== undefined &&
+      !fiscalEffects.has(question.fiscalEffect)
+    ) {
+      throw new Error(`Question ${index} has an invalid fiscal effect.`);
     }
     const effectEntries = Object.entries(question.effects || {});
     if (!effectEntries.length) {
@@ -416,6 +432,25 @@
     return percentages;
   }
 
+  function getOptionFiscalHint(question, optionIndex) {
+    if (
+      !question ||
+      !fiscalEffects.has(question.fiscalEffect) ||
+      !Number.isInteger(optionIndex)
+    ) {
+      return "";
+    }
+
+    const option = options[optionIndex];
+    if (!option || option[1] === 0) {
+      return "";
+    }
+
+    const supportIncreases = question.fiscalEffect === "increase";
+    const increases = supportIncreases ? option[1] > 0 : option[1] < 0;
+    return increases ? "该选项会增加财政支出" : "该选项会减少财政支出";
+  }
+
   return {
     meta,
     options,
@@ -423,5 +458,6 @@
     questions,
     calculateScores,
     calculateAxisPercentages,
+    getOptionFiscalHint,
   };
 });

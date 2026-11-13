@@ -28,7 +28,7 @@ describe("questionnaire and result validation", () => {
   it("keeps the current 60-question version", () => {
     expect(questionnaire.questions).toHaveLength(60);
     expect(questionnaire.axes).toHaveLength(8);
-    expect(questionnaire.meta.testVersion).toBe("2026-11-10.1");
+    expect(questionnaire.meta.testVersion).toBe("2026-11-13.1");
     expect(questionnaire.meta.importanceMultiplier).toBe(1.5);
     expect(questionnaire.axes.map((axis) => axis.key)).toEqual([
       "government",
@@ -40,6 +40,22 @@ describe("questionnaire and result validation", () => {
       "west",
       "gender",
     ]);
+  });
+
+  it("uses the revised national-culture and gender axis labels", () => {
+    const cultureAxis = questionnaire.axes.find((axis) => axis.key === "han");
+    const genderAxis = questionnaire.axes.find((axis) => axis.key === "gender");
+
+    expect(cultureAxis).toMatchObject({
+      name: "民族文化",
+      left: "多元民族文化",
+      right: "汉民族文化",
+    });
+    expect(genderAxis).toMatchObject({
+      name: "性别立场",
+      left: "利男",
+      right: "利女",
+    });
   });
 
   it("recalculates scores and ignores client-supplied scores", () => {
@@ -87,8 +103,30 @@ describe("questionnaire and result validation", () => {
     expect(percentageFor(25, 0).peace).toBeGreaterThan(0);
     expect(percentageFor(6, 0).social).toBeLessThan(0);
     expect(percentageFor(18, 0).political).toBeLessThan(0);
-    expect(percentageFor(45, 0).gender).toBeLessThan(0);
-    expect(percentageFor(48, 0).gender).toBeGreaterThan(0);
+    expect(percentageFor(45, 0).gender).toBeGreaterThan(0);
+    expect(percentageFor(48, 0).gender).toBeLessThan(0);
+    expect(percentageFor(50, 0).gender).toBeGreaterThan(0);
+  });
+
+  it("generates fiscal hints in the correct direction", () => {
+    const infrastructure = questionnaire.questions[1];
+    const reduceTransfers = questionnaire.questions[59];
+    const noHintQuestion = questionnaire.questions[0];
+
+    expect(questionnaire.getOptionFiscalHint(infrastructure, 0)).toBe(
+      "该选项会增加财政支出"
+    );
+    expect(questionnaire.getOptionFiscalHint(infrastructure, 2)).toBe("");
+    expect(questionnaire.getOptionFiscalHint(infrastructure, 4)).toBe(
+      "该选项会减少财政支出"
+    );
+    expect(questionnaire.getOptionFiscalHint(reduceTransfers, 0)).toBe(
+      "该选项会减少财政支出"
+    );
+    expect(questionnaire.getOptionFiscalHint(reduceTransfers, 4)).toBe(
+      "该选项会增加财政支出"
+    );
+    expect(questionnaire.getOptionFiscalHint(noHintQuestion, 0)).toBe("");
   });
 
   it("boosts marked questions without changing the percentage scale", () => {
