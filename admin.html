@@ -157,7 +157,7 @@
               <th>耗时</th>
               <th>重点题</th>
               <th>八轴倾向</th>
-              <th><span class="sr-only">操作</span></th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody id="results-body"></tbody>
@@ -186,8 +186,12 @@
         <h2 id="detail-title">答卷详情</h2>
         <p id="detail-subtitle" class="drawer-subtitle"></p>
       </div>
-      <button id="detail-close" class="icon-button" type="button" aria-label="关闭详情">×</button>
+      <div class="drawer-actions">
+        <button id="detail-delete" class="button danger" type="button">删除此答卷</button>
+        <button id="detail-close" class="icon-button" type="button" aria-label="关闭详情">×</button>
+      </div>
     </header>
+    <p id="detail-status" class="drawer-status" role="status" aria-live="polite"></p>
     <div id="detail-meta" class="detail-meta"></div>
     <section class="drawer-section">
       <h3>八轴结果</h3>

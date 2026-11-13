@@ -80,6 +80,13 @@ export default {
         response = await handleClientStatus(request, env, allowedOrigin);
       } else if (url.pathname === "/api/admin/results") {
         response = await handleAdminDashboard(request, env, allowedOrigin, url);
+      } else if (/^\/api\/admin\/results\/[^/]+$/.test(url.pathname)) {
+        response = await handleAdminDelete(
+          request,
+          env,
+          allowedOrigin,
+          url.pathname.slice("/api/admin/results/".length)
+        );
       } else if (url.pathname === "/api/admin/results.csv") {
         response = await handleAdminCsv(request, env, allowedOrigin);
       } else if (url.pathname === "/api/health") {
@@ -223,6 +230,45 @@ async function handleAdminDashboard(request, env, allowedOrigin, url) {
   const filters = parseAdminFilters(url);
   const dashboard = await loadAdminDashboard(env.DB, filters);
   return jsonResponse(200, dashboard, allowedOrigin);
+}
+
+async function handleAdminDelete(request, env, allowedOrigin, encodedResultId) {
+  if (request.method !== "DELETE") {
+    return methodNotAllowed("DELETE", allowedOrigin);
+  }
+
+  await assertAdminAccess(request, env);
+
+  let resultId;
+  try {
+    resultId = decodeURIComponent(encodedResultId);
+  } catch {
+    throw new HttpError(400, "invalid_result_id", "答卷 ID 格式不正确。");
+  }
+  if (!isUuid(resultId)) {
+    throw new HttpError(400, "invalid_result_id", "答卷 ID 格式不正确。");
+  }
+
+  const result = await env.DB.prepare(
+    "DELETE FROM results WHERE result_id = ?"
+  )
+    .bind(resultId)
+    .run();
+
+  if (Number(result.meta?.changes || 0) === 0) {
+    throw new HttpError(404, "result_not_found", "未找到该答卷，可能已被删除。");
+  }
+
+  console.log(`Deleted anonymous result ${resultId}`);
+  return jsonResponse(
+    200,
+    {
+      ok: true,
+      resultId,
+      message: "答卷已删除，统计已重新计算。",
+    },
+    allowedOrigin
+  );
 }
 
 async function handleAdminCsv(request, env, allowedOrigin) {
@@ -709,7 +755,7 @@ function jsonResponse(status, payload, allowedOrigin, additionalHeaders = {}) {
 
 function applyCorsHeaders(headers, allowedOrigin) {
   headers.set("Access-Control-Allow-Origin", allowedOrigin);
-  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   headers.set(
     "Access-Control-Allow-Headers",
     "Content-Type, X-Client-Id, Authorization"

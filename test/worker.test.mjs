@@ -62,6 +62,7 @@ describe("CORS", () => {
     expect(response.headers.get("Access-Control-Allow-Headers")).toContain(
       "X-Client-Id"
     );
+    expect(response.headers.get("Access-Control-Allow-Methods")).toContain("DELETE");
   });
 
   it("does not add CORS permission for unknown origins", async () => {
@@ -374,6 +375,106 @@ describe("admin dashboard", () => {
         })
       ).status
     ).toBe(400);
+  });
+
+  it("deletes one result and recomputes the dashboard statistics", async () => {
+    const firstImportance = new Array(60).fill(false);
+    firstImportance[0] = true;
+    const firstSubmission = await submit(
+      makePayload({
+        answers: new Array(60).fill(2),
+        importantQuestions: firstImportance,
+        durationMs: 480000,
+      }),
+      crypto.randomUUID()
+    );
+    expect(firstSubmission.status).toBe(201);
+    const firstResult = await readJson(firstSubmission);
+
+    const secondImportance = new Array(60).fill(false);
+    secondImportance[1] = true;
+    secondImportance[2] = true;
+    const secondSubmission = await submit(
+      makePayload({
+        answers: new Array(60).fill(0),
+        importantQuestions: secondImportance,
+        durationMs: 600000,
+      }),
+      crypto.randomUUID()
+    );
+    expect(secondSubmission.status).toBe(201);
+
+    const authHeaders = {
+      Origin: ALLOWED_ORIGIN,
+      Authorization: `Bearer ${ADMIN_TOKEN}`,
+    };
+    const beforeDelete = await readJson(
+      await apiFetch("/api/admin/results", { headers: authHeaders })
+    );
+    expect(beforeDelete.summary.total).toBe(2);
+    expect(beforeDelete.summary.importanceMarks).toBe(3);
+    expect(beforeDelete.summary.averageDurationMs).toBe(540000);
+
+    const deleted = await apiFetch(
+      `/api/admin/results/${firstResult.resultId}`,
+      { method: "DELETE", headers: authHeaders }
+    );
+    expect(deleted.status).toBe(200);
+    expect(deleted.headers.get("Access-Control-Allow-Origin")).toBe(ALLOWED_ORIGIN);
+    expect(await readJson(deleted)).toMatchObject({
+      ok: true,
+      resultId: firstResult.resultId,
+    });
+
+    const afterDelete = await readJson(
+      await apiFetch("/api/admin/results", { headers: authHeaders })
+    );
+    expect(afterDelete.summary.total).toBe(1);
+    expect(afterDelete.summary.uniqueClients).toBe(1);
+    expect(afterDelete.summary.importanceMarks).toBe(2);
+    expect(afterDelete.summary.averageDurationMs).toBe(600000);
+    expect(afterDelete.results.map((result) => result.resultId)).not.toContain(
+      firstResult.resultId
+    );
+
+    const deletedAgain = await apiFetch(
+      `/api/admin/results/${firstResult.resultId}`,
+      { method: "DELETE", headers: authHeaders }
+    );
+    expect(deletedAgain.status).toBe(404);
+  });
+
+  it("protects result deletion and validates the result id", async () => {
+    const resultId = crypto.randomUUID();
+    expect(
+      (
+        await apiFetch(`/api/admin/results/${resultId}`, {
+          method: "DELETE",
+          headers: { Origin: ALLOWED_ORIGIN },
+        })
+      ).status
+    ).toBe(401);
+
+    const authHeaders = {
+      Origin: ALLOWED_ORIGIN,
+      Authorization: `Bearer ${ADMIN_TOKEN}`,
+    };
+    expect(
+      (
+        await apiFetch("/api/admin/results/not-a-uuid", {
+          method: "DELETE",
+          headers: authHeaders,
+        })
+      ).status
+    ).toBe(400);
+    expect(
+      (
+        await apiFetch(`/api/admin/results/${crypto.randomUUID()}`, {
+          method: "DELETE",
+          headers: authHeaders,
+        })
+      ).status
+    ).toBe(404);
   });
 });
 

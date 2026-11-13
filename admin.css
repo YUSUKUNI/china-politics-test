@@ -167,6 +167,8 @@ input:focus, select:focus {
 .button.secondary:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-strong); }
 .button.ghost { background: transparent; color: var(--muted); }
 .button.ghost:hover:not(:disabled) { background: #edf2f7; color: var(--text); }
+.button.danger { border-color: #f0b8b2; background: var(--red-soft); color: var(--red); }
+.button.danger:hover:not(:disabled) { border-color: var(--red); background: #ffdeda; color: #8f1c12; }
 .login-button { width: 100%; margin-top: 5px; min-height: 46px; }
 
 .inline-status {
@@ -474,8 +476,12 @@ tbody tr:hover { background: #f9fbfc; }
 .axis-chip.pos { background: var(--primary-soft); color: var(--primary-strong); }
 .axis-chip.neg { background: var(--blue-soft); color: #1d4ed8; }
 
-.view-button { padding: 5px 9px; border: 1px solid var(--line-strong); border-radius: 7px; background: #ffffff; color: var(--text); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
-.view-button:hover { border-color: var(--primary); color: var(--primary-strong); }
+.result-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.view-button, .delete-button { padding: 5px 9px; border: 1px solid var(--line-strong); border-radius: 7px; background: #ffffff; color: var(--text); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.view-button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-strong); }
+.delete-button { border-color: #f0c6c1; color: var(--red); }
+.delete-button:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); }
+.view-button:disabled, .delete-button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; padding-top: 17px; }
 .page-info { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
@@ -522,6 +528,11 @@ tbody tr:hover { background: #f9fbfc; }
 .drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 19px; border-bottom: 1px solid var(--line); }
 .drawer-header h2 { margin: 5px 0 4px; font-size: 1.35rem; }
 .drawer-subtitle { margin: 0; color: var(--muted); font-size: 0.78rem; }
+.drawer-actions { display: flex; align-items: center; gap: 8px; }
+.drawer-status { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); font-size: 0.8rem; }
+.drawer-status:empty { display: none; }
+.drawer-status.error { color: var(--red); }
+.drawer-status.success { color: var(--green); }
 
 .icon-button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: #ffffff; color: var(--muted); font-size: 1.45rem; line-height: 1; }
 .icon-button:hover { border-color: var(--line-strong); color: var(--text); }

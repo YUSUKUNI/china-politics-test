@@ -82,6 +82,8 @@
     detailTitle: document.getElementById("detail-title"),
     detailSubtitle: document.getElementById("detail-subtitle"),
     detailClose: document.getElementById("detail-close"),
+    detailDelete: document.getElementById("detail-delete"),
+    detailStatus: document.getElementById("detail-status"),
     detailMeta: document.getElementById("detail-meta"),
     detailAxes: document.getElementById("detail-axes"),
     detailAnswers: document.getElementById("detail-answers"),
@@ -97,6 +99,8 @@
     to: "",
     q: "",
     loading: false,
+    deleting: false,
+    activeResultId: "",
     lastFocusedElement: null,
   };
 
@@ -217,11 +221,32 @@
     el.appStatus.className = `app-status${type ? ` ${type}` : ""}`;
   }
 
+  function setDetailStatus(message, type = "") {
+    el.detailStatus.textContent = message || "";
+    el.detailStatus.className = `drawer-status${type ? ` ${type}` : ""}`;
+  }
+
+  function setDeleteFeedback(message, type = "") {
+    if (el.detailOverlay.hidden) {
+      setAppStatus(message, type);
+    } else {
+      setDetailStatus(message, type);
+    }
+  }
+
   function setBusy(isBusy) {
     state.loading = isBusy;
     el.refreshButton.disabled = isBusy;
     el.exportButton.disabled = isBusy || !state.token;
     el.loginButton.disabled = isBusy || !API_BASE;
+  }
+
+  function setDeleteBusy(isBusy) {
+    el.detailDelete.disabled = isBusy;
+    el.detailDelete.textContent = isBusy ? "正在删除…" : "删除此答卷";
+    el.resultsBody.querySelectorAll("[data-delete-result]").forEach((button) => {
+      button.disabled = isBusy;
+    });
   }
 
   function readSessionToken() {
@@ -553,7 +578,12 @@
             <td class="result-duration">${formatDuration(result.durationMs)}</td>
             <td>${importance}</td>
             <td><div class="axis-chip-row">${chips}</div></td>
-            <td><button class="view-button" type="button" data-view-result="${escapeHtml(result.resultId)}">查看</button></td>
+            <td>
+              <div class="result-actions">
+                <button class="view-button" type="button" data-view-result="${escapeHtml(result.resultId)}">查看</button>
+                <button class="delete-button" type="button" data-delete-result="${escapeHtml(result.resultId)}" aria-label="删除答卷 ${escapeHtml(shortId(result.resultId))}">删除</button>
+              </div>
+            </td>
           </tr>
         `;
       })
@@ -573,6 +603,10 @@
       return;
     }
     state.lastFocusedElement = document.activeElement;
+    state.activeResultId = resultId;
+    setDetailStatus("");
+    el.detailDelete.disabled = false;
+    el.detailDelete.textContent = "删除此答卷";
     el.detailTitle.textContent = `答卷 ${shortId(result.resultId)}`;
     el.detailSubtitle.textContent = `${formatDateTime(result.createdAt)} · ${result.testVersion}`;
     el.detailMeta.innerHTML = [
@@ -634,8 +668,69 @@
     }
     el.detailOverlay.hidden = true;
     document.body.classList.remove("drawer-open");
+    state.activeResultId = "";
+    setDetailStatus("");
     if (options.restoreFocus !== false && state.lastFocusedElement?.focus) {
       state.lastFocusedElement.focus();
+    }
+  }
+
+  async function deleteResult(resultId) {
+    if (!resultId || state.deleting || !state.token || !API_BASE) {
+      return;
+    }
+    const result = (state.data?.results || []).find((item) => item.resultId === resultId);
+    const label = result
+      ? `${shortId(result.resultId)}（${formatDateTime(result.createdAt)}）`
+      : shortId(resultId);
+    const confirmed = window.confirm(
+      `确定永久删除答卷 ${label} 吗？\n\n删除后无法恢复，后台统计会立即重新计算。`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    state.deleting = true;
+    setDeleteBusy(true);
+    setDeleteFeedback("正在删除答卷…");
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/results/${encodeURIComponent(resultId)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${state.token}` },
+          credentials: "omit",
+          cache: "no-store",
+        }
+      );
+
+      if (response.status === 401) {
+        handleUnauthorized("管理令牌无效或已过期，请重新输入。");
+        return;
+      }
+
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const payload = await response.json();
+          message = payload.message || message;
+        } catch {
+          // Keep the HTTP status when no JSON body is available.
+        }
+        throw new Error(message);
+      }
+
+      closeDetail({ restoreFocus: false });
+      const refreshed = await loadDashboard();
+      if (refreshed) {
+        setAppStatus("答卷已删除，统计已重新计算。", "success");
+      }
+    } catch (error) {
+      setDeleteFeedback(`删除失败：${error.message}`, "error");
+    } finally {
+      state.deleting = false;
+      setDeleteBusy(false);
     }
   }
 
@@ -781,12 +876,18 @@
     });
 
     el.resultsBody.addEventListener("click", (event) => {
+      const deleteTrigger = event.target.closest("[data-delete-result]");
+      if (deleteTrigger) {
+        deleteResult(deleteTrigger.getAttribute("data-delete-result"));
+        return;
+      }
       const trigger = event.target.closest("[data-view-result]");
       if (trigger) {
         openDetail(trigger.getAttribute("data-view-result"));
       }
     });
 
+    el.detailDelete.addEventListener("click", () => deleteResult(state.activeResultId));
     el.detailClose.addEventListener("click", () => closeDetail());
     el.detailOverlay.addEventListener("click", (event) => {
       if (event.target === el.detailOverlay) {

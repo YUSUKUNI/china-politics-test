@@ -10,7 +10,7 @@
 2. 前端调用 `POST /api/results`，通过 `X-Client-Id` 请求头发送匿名标识、60 个答案和每题的重要题标记。
 3. 服务端校验版本、同意信息、答案和重要题标记，并使用 `questionnaire.js` 重新计算八轴分数。
 4. 结果写入 D1 的 `results` 表；`(client_id, test_version)` 唯一约束保证同一浏览器每个版本只入库一次。
-5. `admin.html` 是受管理令牌保护的数据后台，可查看提交概况、八轴倾向、每日趋势、重点题排行和逐份答卷，并导出完整 CSV。不会从公开页面链接该管理页面。
+5. `admin.html` 是受管理令牌保护的数据后台，可查看提交概况、八轴倾向、每日趋势、重点题排行和逐份答卷，支持删除单份异常答卷并立即重新统计，也可导出完整 CSV。不会从公开页面链接该管理页面。
 
 当前线上地址：
 
@@ -185,6 +185,10 @@ CSV 使用 UTF-8 BOM，包含结果 ID、匿名客户端 ID、版本、时间、
 ### `GET /api/admin/results`
 
 请求头与 CSV 导出相同，必须携带 `Authorization: Bearer <ADMIN_EXPORT_TOKEN>`。支持 `page`、`pageSize`、`version`、`from`、`to` 和 `q` 查询参数，返回汇总指标、八轴均值与范围、最近每日趋势、重点题排行、版本分布、分页后的答卷列表和逐题答案。管理页面 `admin.html` 通过该接口加载数据。
+
+### `DELETE /api/admin/results/:resultId`
+
+请求头需要 `Authorization: Bearer <ADMIN_EXPORT_TOKEN>`。永久删除指定结果；成功返回 `200`，结果不存在返回 `404`，结果 ID 格式错误返回 `400`。后台删除成功后会重新请求汇总接口，因此总数、独立设备数、重点题统计和八轴均值都会按剩余数据重新计算。
 
 ### `GET /api/health`
 
