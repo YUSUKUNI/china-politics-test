@@ -6,8 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.pages.dev https://*.workers.dev http://127.0.0.1:8787 http://localhost:8787; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'">
-<title>数据作战室 · 中国政治立场测试</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23bb2d23'/%3E%3Cpath d='M17 19h30v26H17z' fill='none' stroke='%23f2ecdf' stroke-width='4'/%3E%3Cpath d='M23 32l6 6 13-15' fill='none' stroke='%23f2ecdf' stroke-width='4'/%3E%3C/svg%3E">
+<title>数据管理后台 · 中国政治立场测试</title>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -15,48 +14,41 @@
 
 <section id="login-view" class="login-view" aria-labelledby="login-title">
   <div class="login-card">
-    <p class="login-classification">RESTRICTED / 内部资料</p>
-    <div class="brand-mark" aria-hidden="true">选</div>
-    <p class="eyebrow">ELECTION STRATEGY COMMITTEE</p>
-    <h1 id="login-title">数据作战室</h1>
-    <p class="lead">汇总匿名民意样本、研判八轴态势并调度答卷档案。模拟企划，非官方调查；仅限获授权人员进入。</p>
+    <div class="brand-mark" aria-hidden="true">政</div>
+    <p class="eyebrow">CHINA POLITICS TEST</p>
+    <h1 id="login-title">数据管理后台</h1>
+    <p class="lead">查看提交概况、八轴倾向与逐份答卷。仅限持有管理令牌的人员访问。</p>
 
     <form id="login-form" class="login-form" novalidate>
-      <label for="token-input">委员会通行密钥</label>
+      <label for="token-input">管理令牌</label>
       <div class="password-wrap">
         <input id="token-input" type="password" autocomplete="current-password" spellcheck="false" placeholder="ADMIN_EXPORT_TOKEN">
         <button id="toggle-token" class="toggle-token" type="button" aria-label="显示令牌">显示</button>
       </div>
-      <button id="login-button" class="button primary login-button" type="submit">核验身份 · 进入作战室</button>
+      <button id="login-button" class="button primary login-button" type="submit">验证并进入</button>
     </form>
 
     <p id="login-status" class="inline-status" role="status" aria-live="polite"></p>
-    <p class="security-note">通行密钥仅保存在当前标签页的 sessionStorage 中，关闭标签页后自动清除；不会写入仓库或 URL。</p>
-    <p class="login-terminal">AUTHORIZED PERSONNEL ONLY · NODE 060 · 2026</p>
-    <a class="back-link" href="index.html">← 返回民意调查页</a>
+    <p class="security-note">令牌仅保存在当前标签页的 sessionStorage 中，关闭标签页后自动清除；不会写入仓库或 URL。</p>
+    <a class="back-link" href="index.html">← 返回测试页面</a>
   </div>
 </section>
 
 <section id="dashboard-view" class="dashboard-view" hidden>
   <header class="topbar">
-    <div class="committee-strip">
-      <span>INTERNAL BRIEFING SYSTEM / 内部研判系统</span>
-      <span>SR-060 · LIVE SITUATION ROOM</span>
-    </div>
     <div class="topbar-inner">
       <div class="brand-line">
-        <span class="brand-mark small" aria-hidden="true">选</span>
+        <span class="brand-mark small" aria-hidden="true">政</span>
         <div>
-          <p class="eyebrow">ELECTION STRATEGY COMMITTEE</p>
-          <strong>民意数据作战室</strong>
+          <p class="eyebrow">ADMIN CONSOLE</p>
+          <strong>中国政治立场测试</strong>
         </div>
-        <span class="simulation-tag">模拟企划</span>
       </div>
       <div class="topbar-actions">
         <span id="sync-status" class="sync-status" role="status" aria-live="polite"></span>
-        <button id="refresh-button" class="button secondary" type="button">刷新战情</button>
-        <button id="export-button" class="button primary" type="button">导出战报 CSV</button>
-        <button id="logout-button" class="button ghost" type="button">退出终端</button>
+        <button id="refresh-button" class="button secondary" type="button">刷新</button>
+        <button id="export-button" class="button primary" type="button">导出全部 CSV</button>
+        <button id="logout-button" class="button ghost" type="button">退出</button>
       </div>
     </div>
   </header>
@@ -64,8 +56,8 @@
   <main class="dashboard">
     <section class="page-heading">
       <div>
-        <p class="eyebrow">CAMPAIGN INTELLIGENCE / LIVE</p>
-        <h1>民意态势总览</h1>
+        <p class="eyebrow">DATA OVERVIEW</p>
+        <h1>提交数据总览</h1>
         <p id="last-updated" class="page-subtitle">正在读取数据…</p>
       </div>
       <p id="app-status" class="app-status" role="status" aria-live="polite"></p>
@@ -77,8 +69,8 @@
       <article class="panel panel-wide">
         <header class="panel-header">
           <div>
-            <h2>八轴民意态势</h2>
-            <p>负值偏左，正值偏右；显示当前样本范围的平均坐标。</p>
+            <h2>八轴总体倾向</h2>
+            <p>负值偏左，正值偏右；显示当前筛选范围的平均百分比。</p>
           </div>
         </header>
         <div id="axis-summary" class="axis-summary"></div>
@@ -87,8 +79,8 @@
       <article class="panel">
         <header class="panel-header">
           <div>
-            <h2>每日回传</h2>
-            <p>按北京时间统计最近 14 天的样本回传量。</p>
+            <h2>每日提交</h2>
+            <p>按北京时间统计最近 14 天。</p>
           </div>
         </header>
         <div id="trend-chart" class="trend-chart"></div>
@@ -99,8 +91,8 @@
       <article class="panel panel-wide">
         <header class="panel-header">
           <div>
-            <h2>核心议题热度</h2>
-            <p>被标记为“非常重要”的议题及其样本占比。</p>
+            <h2>重点题排行</h2>
+            <p>被标记为“非常重要”的题目及占比。</p>
           </div>
         </header>
         <div id="important-ranking" class="ranking-list"></div>
@@ -109,8 +101,8 @@
       <article class="panel">
         <header class="panel-header">
           <div>
-            <h2>样本批次</h2>
-            <p>数据库内的全部测试版本与最近回传时间。</p>
+            <h2>版本分布</h2>
+            <p>数据库内的全部测试版本。</p>
           </div>
         </header>
         <div id="version-summary" class="version-list"></div>
@@ -120,8 +112,8 @@
     <section class="panel question-panel" aria-labelledby="question-tendency-title">
       <header class="panel-header question-panel-header">
         <div>
-          <h2 id="question-tendency-title">议题战线</h2>
-          <p>逐题观察支持、中立与反对分布；净倾向为正表示偏支持，为负表示偏反对。统计随筛选和档案删除同步更新。</p>
+          <h2 id="question-tendency-title">每题倾向</h2>
+          <p>每道题的支持、中立与反对分布；净倾向为正表示偏支持，为负表示偏反对。统计随上方筛选和删除同步更新。</p>
         </div>
         <div class="question-controls">
           <label class="compact-field" for="question-section-filter">
@@ -147,7 +139,7 @@
     <section class="panel results-panel">
       <header class="panel-header results-header">
         <div>
-          <h2>样本档案</h2>
+          <h2>答卷明细</h2>
           <p id="table-summary">正在读取…</p>
         </div>
         <label class="page-size-label" for="page-size">每页
@@ -161,22 +153,22 @@
 
       <form id="filter-form" class="filter-bar">
         <label class="filter-field">
-          <span>样本批次</span>
+          <span>测试版本</span>
           <select id="version-filter">
             <option value="">全部版本</option>
           </select>
         </label>
         <label class="filter-field">
-          <span>起始日期</span>
+          <span>开始日期</span>
           <input id="from-filter" type="date">
         </label>
         <label class="filter-field">
-          <span>截止日期</span>
+          <span>结束日期</span>
           <input id="to-filter" type="date">
         </label>
         <label class="filter-field grow">
-          <span>检索档案</span>
-          <input id="search-filter" type="search" placeholder="结果 ID 或匿名终端 ID">
+          <span>搜索</span>
+          <input id="search-filter" type="search" placeholder="结果 ID 或匿名设备 ID">
         </label>
         <button class="button primary" type="submit">应用筛选</button>
         <button id="clear-filters" class="button secondary" type="button">清除</button>
@@ -186,13 +178,13 @@
         <table>
           <thead>
             <tr>
-              <th>回传时间</th>
-              <th>批次</th>
-              <th>匿名终端</th>
-              <th>用时</th>
-              <th>重点标记</th>
-              <th>八轴态势</th>
-              <th>档案操作</th>
+              <th>提交时间</th>
+              <th>版本</th>
+              <th>匿名设备</th>
+              <th>耗时</th>
+              <th>重点题</th>
+              <th>八轴倾向</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody id="results-body"></tbody>
@@ -207,8 +199,8 @@
     </section>
 
     <footer class="admin-footer">
-      <span>中国政治立场测试 · 模拟选战数据采集系统</span>
-      <a href="index.html">返回民意调查页</a>
+      <span>中国政治立场测试 · 管理后台</span>
+      <a href="index.html">返回测试页面</a>
     </footer>
   </main>
 </section>
@@ -217,8 +209,8 @@
   <aside id="detail-drawer" class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
     <header class="drawer-header">
       <div>
-        <p class="eyebrow">DOSSIER / CONFIDENTIAL</p>
-        <h2 id="detail-title">样本档案</h2>
+        <p class="eyebrow">RESPONSE DETAIL</p>
+        <h2 id="detail-title">答卷详情</h2>
         <p id="detail-subtitle" class="drawer-subtitle"></p>
       </div>
       <div class="drawer-actions">
@@ -229,11 +221,11 @@
     <p id="detail-status" class="drawer-status" role="status" aria-live="polite"></p>
     <div id="detail-meta" class="detail-meta"></div>
     <section class="drawer-section">
-      <h3>八轴态势</h3>
+      <h3>八轴结果</h3>
       <div id="detail-axes" class="axis-summary compact"></div>
     </section>
     <section class="drawer-section">
-      <h3>逐题记录</h3>
+      <h3>逐题回答</h3>
       <div id="detail-answers" class="answer-grid"></div>
     </section>
   </aside>
