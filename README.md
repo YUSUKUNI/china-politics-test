@@ -216,6 +216,7 @@ CSV 的“受保护”依赖 HTTPS 和 `ADMIN_EXPORT_TOKEN`，不是额外的文
 - 当前测试版本为 `2026-11-13.1`，同意书版本为 `2026-10-29`，重要题权重倍率为 `1.5`。
 - 民族文化轴两端为“多元民族文化—汉民族文化”；性别立场轴两端为“利男—利女”。新版第 46、49 题的性别轴方向已按“利男/利女”重新校准，旧版性别轴数据不能直接与新数据合并比较。
 - 财政支出提示只用于解释选项方向，不额外改变题目权重；实际计分仍以 `effects` 为准。
+- 当前 60 题的 UTF-8 文本归档见 [`docs/china-politics-test-60-questions-2026-11-13.1.txt`](docs/china-politics-test-60-questions-2026-11-13.1.txt)，包含分组、题干、轴权重和财政支出提示。
 - 60 题完整题干、数组下标与八轴权重总表见 `docs/question-axis-weight-list.md`；题库结构、方向校准和数据分析说明见 `docs/new-question-axis-mapping.md`。分析不同版本数据时应按 `test_version` 分组。
 
 ## 唯一标识限制
