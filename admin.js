@@ -66,6 +66,10 @@
     trendChart: document.getElementById("trend-chart"),
     importantRanking: document.getElementById("important-ranking"),
     versionSummary: document.getElementById("version-summary"),
+    questionSectionFilter: document.getElementById("question-section-filter"),
+    questionSort: document.getElementById("question-sort"),
+    questionTendencySummary: document.getElementById("question-tendency-summary"),
+    questionTendency: document.getElementById("question-tendency"),
     tableSummary: document.getElementById("table-summary"),
     pageSize: document.getElementById("page-size"),
     filterForm: document.getElementById("filter-form"),
@@ -98,6 +102,8 @@
     from: "",
     to: "",
     q: "",
+    questionSection: "",
+    questionSort: "number",
     loading: false,
     deleting: false,
     activeResultId: "",
@@ -137,6 +143,14 @@
     const rounded = Math.round(number * 10) / 10;
     const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
     return `${rounded > 0 ? "+" : ""}${text}%`;
+  }
+
+  function formatShare(value) {
+    if (!isNumericValue(value)) {
+      return "—";
+    }
+    const rounded = Math.round(Number(value) * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
   }
 
   function formatDuration(value) {
@@ -386,6 +400,7 @@
     renderTrend();
     renderImportantRanking();
     renderVersions();
+    renderQuestionTendency();
     renderResults();
 
     const lastSubmittedAt = state.data.summary.lastSubmittedAt;
@@ -542,6 +557,129 @@
           </div>
         `
       )
+      .join("");
+  }
+
+  function renderQuestionFilters() {
+    const sections = [
+      ...new Set(
+        (QUESTIONNAIRE?.questions || [])
+          .map((question) => question.section)
+          .filter(Boolean)
+      ),
+    ];
+    el.questionSectionFilter.innerHTML = [
+      '<option value="">全部部分</option>',
+      ...sections.map(
+        (section) =>
+          `<option value="${escapeHtml(section)}">${escapeHtml(section)}</option>`
+      ),
+    ].join("");
+    if (state.questionSection && !sections.includes(state.questionSection)) {
+      state.questionSection = "";
+    }
+    el.questionSectionFilter.value = state.questionSection;
+    el.questionSort.value = state.questionSort;
+  }
+
+  function compareQuestionTendencies(first, second, sortMode) {
+    if (sortMode !== "support" && sortMode !== "oppose") {
+      return first.questionNumber - second.questionNumber;
+    }
+
+    const firstHasSample =
+      Number(first.sampleCount) > 0 && isNumericValue(first.tendencyPercentage);
+    const secondHasSample =
+      Number(second.sampleCount) > 0 && isNumericValue(second.tendencyPercentage);
+    if (!firstHasSample && !secondHasSample) {
+      return first.questionNumber - second.questionNumber;
+    }
+    if (!firstHasSample) {
+      return 1;
+    }
+    if (!secondHasSample) {
+      return -1;
+    }
+
+    const firstValue = Number(first.tendencyPercentage);
+    const secondValue = Number(second.tendencyPercentage);
+    const difference = sortMode === "support" ? secondValue - firstValue : firstValue - secondValue;
+    return difference || first.questionNumber - second.questionNumber;
+  }
+
+  function renderQuestionTendencyRow(item) {
+    const sampleCount = Math.max(0, Number(item.sampleCount) || 0);
+    const supportPercentage = sampleCount ? Number(item.supportPercentage) || 0 : null;
+    const neutralPercentage = sampleCount ? Number(item.neutralPercentage) || 0 : null;
+    const opposePercentage = sampleCount ? Number(item.opposePercentage) || 0 : null;
+    const tendencyPercentage = sampleCount ? item.tendencyPercentage : null;
+    const tone = percentageTone(tendencyPercentage);
+    const segmentWidth = (value) =>
+      `${sampleCount ? Math.min(100, Math.max(0, Number(value) || 0)) : 0}%`;
+    const distributionLabel = sampleCount
+      ? `第 ${item.questionNumber} 题：支持 ${formatShare(supportPercentage)}，中立 ${formatShare(neutralPercentage)}，反对 ${formatShare(opposePercentage)}`
+      : `第 ${item.questionNumber} 题：暂无样本`;
+
+    return `
+      <article class="question-tendency-row">
+        <div class="question-tendency-copy">
+          <div class="question-tendency-meta">
+            <span class="question-number">第 ${item.questionNumber} 题</span>
+            <span class="question-section-badge">${escapeHtml(item.section || "未分类")}</span>
+            <span class="question-sample">${sampleCount ? `${formatNumber(sampleCount)} 份样本` : "暂无样本"}</span>
+          </div>
+          <p class="question-tendency-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</p>
+        </div>
+        <div class="question-tendency-distribution">
+          <div class="question-distribution-track${sampleCount ? "" : " empty"}" role="img" aria-label="${escapeHtml(distributionLabel)}">
+            <span class="question-segment support" style="width:${segmentWidth(supportPercentage)}"></span>
+            <span class="question-segment neutral" style="width:${segmentWidth(neutralPercentage)}"></span>
+            <span class="question-segment oppose" style="width:${segmentWidth(opposePercentage)}"></span>
+          </div>
+          <div class="question-share-row">
+            <span class="question-share support" title="选择很支持或一般支持：${formatNumber(item.supportCount)} 份">支持 <strong>${formatShare(supportPercentage)}</strong></span>
+            <span class="question-share neutral" title="选择中立：${formatNumber(item.neutralCount)} 份">中立 <strong>${formatShare(neutralPercentage)}</strong></span>
+            <span class="question-share oppose" title="选择一般不支持或很不支持：${formatNumber(item.opposeCount)} 份">反对 <strong>${formatShare(opposePercentage)}</strong></span>
+          </div>
+        </div>
+        <div class="question-tendency-score ${tone}" title="净倾向 =（很支持×2 + 一般支持×1 − 一般不支持×1 − 很不支持×2）÷（2 × 样本数）× 100">
+          <span>净倾向</span>
+          <strong>${sampleCount ? formatPercent(tendencyPercentage) : "—"}</strong>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderQuestionTendency() {
+    renderQuestionFilters();
+    const allItems = Array.isArray(state.data.summary.questionTendencies)
+      ? state.data.summary.questionTendencies
+      : [];
+    if (!allItems.length) {
+      el.questionTendencySummary.textContent = "当前接口没有返回逐题统计。";
+      el.questionTendency.innerHTML = '<p class="empty-state">暂无逐题倾向数据。</p>';
+      return;
+    }
+
+    const filteredItems = state.questionSection
+      ? allItems.filter((item) => item.section === state.questionSection)
+      : allItems;
+    const sortedItems = filteredItems
+      .slice()
+      .sort((first, second) =>
+        compareQuestionTendencies(first, second, state.questionSort)
+      );
+    const answeredCount = sortedItems.filter((item) => Number(item.sampleCount) > 0).length;
+    const sectionLabel = state.questionSection || "全部部分";
+    el.questionTendencySummary.textContent = `${sectionLabel} · 显示 ${formatNumber(sortedItems.length)} 道题 · ${formatNumber(answeredCount)} 道有样本 · 当前范围 ${formatNumber(state.data.summary.total)} 份答卷`;
+
+    if (!sortedItems.length) {
+      el.questionTendency.innerHTML = '<p class="empty-state">当前部分没有题目。</p>';
+      return;
+    }
+
+    el.questionTendency.innerHTML = sortedItems
+      .map(renderQuestionTendencyRow)
       .join("");
   }
 
@@ -853,6 +991,16 @@
       el.toFilter.value = "";
       el.searchFilter.value = "";
       loadDashboard();
+    });
+
+    el.questionSectionFilter.addEventListener("change", () => {
+      state.questionSection = el.questionSectionFilter.value;
+      renderQuestionTendency();
+    });
+
+    el.questionSort.addEventListener("change", () => {
+      state.questionSort = el.questionSort.value;
+      renderQuestionTendency();
     });
 
     el.pageSize.addEventListener("change", () => {

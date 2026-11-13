@@ -109,6 +109,33 @@
       </article>
     </section>
 
+    <section class="panel question-panel" aria-labelledby="question-tendency-title">
+      <header class="panel-header question-panel-header">
+        <div>
+          <h2 id="question-tendency-title">每题倾向</h2>
+          <p>每道题的支持、中立与反对分布；净倾向为正表示偏支持，为负表示偏反对。统计随上方筛选和删除同步更新。</p>
+        </div>
+        <div class="question-controls">
+          <label class="compact-field" for="question-section-filter">
+            <span>部分</span>
+            <select id="question-section-filter">
+              <option value="">全部部分</option>
+            </select>
+          </label>
+          <label class="compact-field" for="question-sort">
+            <span>排序</span>
+            <select id="question-sort">
+              <option value="number">题号顺序</option>
+              <option value="support">最支持优先</option>
+              <option value="oppose">最反对优先</option>
+            </select>
+          </label>
+        </div>
+      </header>
+      <p id="question-tendency-summary" class="question-tendency-summary" role="status" aria-live="polite"></p>
+      <div id="question-tendency" class="question-tendency-list"></div>
+    </section>
+
     <section class="panel results-panel">
       <header class="panel-header results-header">
         <div>
