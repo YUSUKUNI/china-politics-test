@@ -257,7 +257,7 @@
 
   function setDeleteBusy(isBusy) {
     el.detailDelete.disabled = isBusy;
-    el.detailDelete.textContent = isBusy ? "正在删除…" : "删除此答卷";
+    el.detailDelete.textContent = isBusy ? "正在删除…" : "删除此档案";
     el.resultsBody.querySelectorAll("[data-delete-result]").forEach((button) => {
       button.disabled = isBusy;
     });
@@ -338,7 +338,7 @@
     });
 
     if (response.status === 401) {
-      handleUnauthorized("管理令牌无效或已过期，请重新输入。");
+      handleUnauthorized("通行密钥无效或已过期，请重新核验。");
       return false;
     }
 
@@ -405,19 +405,19 @@
 
     const lastSubmittedAt = state.data.summary.lastSubmittedAt;
     el.lastUpdated.textContent = lastSubmittedAt
-      ? `最近提交：${formatDateTime(lastSubmittedAt)}（北京时间）`
-      : "数据库中还没有答卷。";
+      ? `最近回传：${formatDateTime(lastSubmittedAt)}（北京时间）`
+      : "数据库内还没有样本档案。";
     el.syncStatus.textContent = `更新于 ${formatClock(state.data.generatedAt)}`;
   }
 
   function renderStats() {
     const summary = state.data.summary;
     const cards = [
-      ["提交总数", formatNumber(summary.total), "当前筛选范围"],
-      ["独立设备", formatNumber(summary.uniqueClients), "按匿名设备 ID 去重"],
-      ["今日新增", formatNumber(summary.todayCount), "全站 · 北京时间"],
-      ["平均耗时", formatDuration(summary.averageDurationMs), "当前筛选范围"],
-      ["重点题标记", formatNumber(summary.importanceMarks), "当前筛选范围"],
+      ["样本总数", formatNumber(summary.total), "当前任务范围"],
+      ["独立终端", formatNumber(summary.uniqueClients), "按匿名终端 ID 去重"],
+      ["今日回传", formatNumber(summary.todayCount), "全站 · 北京时间"],
+      ["平均用时", formatDuration(summary.averageDurationMs), "当前任务范围"],
+      ["重点标记", formatNumber(summary.importanceMarks), "当前任务范围"],
     ];
     el.statsGrid.innerHTML = cards
       .map(
@@ -521,7 +521,7 @@
   function renderImportantRanking() {
     const items = state.data.summary.topImportantQuestions || [];
     if (!items.length) {
-      el.importantRanking.innerHTML = '<p class="empty-state">当前筛选范围还没有重点题标记。</p>';
+      el.importantRanking.innerHTML = '<p class="empty-state">当前任务范围还没有重点议题标记。</p>';
       return;
     }
     const maximum = Math.max(1, ...items.map((item) => item.count));
@@ -544,7 +544,7 @@
   function renderVersions() {
     const versions = state.data.summary.versions || [];
     if (!versions.length) {
-      el.versionSummary.innerHTML = '<p class="empty-state">暂无版本数据。</p>';
+      el.versionSummary.innerHTML = '<p class="empty-state">暂无样本批次。</p>';
       return;
     }
     el.versionSummary.innerHTML = versions
@@ -671,7 +671,7 @@
       );
     const answeredCount = sortedItems.filter((item) => Number(item.sampleCount) > 0).length;
     const sectionLabel = state.questionSection || "全部部分";
-    el.questionTendencySummary.textContent = `${sectionLabel} · 显示 ${formatNumber(sortedItems.length)} 道题 · ${formatNumber(answeredCount)} 道有样本 · 当前范围 ${formatNumber(state.data.summary.total)} 份答卷`;
+    el.questionTendencySummary.textContent = `${sectionLabel} · 显示 ${formatNumber(sortedItems.length)} 道题 · ${formatNumber(answeredCount)} 道有样本 · 当前任务范围 ${formatNumber(state.data.summary.total)} 份样本`;
 
     if (!sortedItems.length) {
       el.questionTendency.innerHTML = '<p class="empty-state">当前部分没有题目。</p>';
@@ -686,13 +686,13 @@
   function renderResults() {
     const results = state.data.results || [];
     const pagination = state.data.pagination;
-    el.tableSummary.textContent = `共 ${formatNumber(pagination.total)} 份答卷当前筛选范围`;
-    el.pageInfo.textContent = `第 ${pagination.page} / ${pagination.pageCount} 页 · 共 ${formatNumber(pagination.total)} 条`;
+    el.tableSummary.textContent = `当前任务范围共 ${formatNumber(pagination.total)} 份样本档案`;
+    el.pageInfo.textContent = `第 ${pagination.page} / ${pagination.pageCount} 页 · 共 ${formatNumber(pagination.total)} 份`;
     el.prevPage.disabled = pagination.page <= 1;
     el.nextPage.disabled = pagination.page >= pagination.pageCount;
 
     if (!results.length) {
-      el.resultsBody.innerHTML = '<tr><td class="empty-cell" colspan="7"><p class="empty-state">当前筛选范围没有答卷。</p></td></tr>';
+      el.resultsBody.innerHTML = '<tr><td class="empty-cell" colspan="7"><p class="empty-state">当前任务范围没有样本档案。</p></td></tr>';
       return;
     }
 
@@ -718,8 +718,8 @@
             <td><div class="axis-chip-row">${chips}</div></td>
             <td>
               <div class="result-actions">
-                <button class="view-button" type="button" data-view-result="${escapeHtml(result.resultId)}">查看</button>
-                <button class="delete-button" type="button" data-delete-result="${escapeHtml(result.resultId)}" aria-label="删除答卷 ${escapeHtml(shortId(result.resultId))}">删除</button>
+                <button class="view-button" type="button" data-view-result="${escapeHtml(result.resultId)}">调阅</button>
+                <button class="delete-button" type="button" data-delete-result="${escapeHtml(result.resultId)}" aria-label="删除样本档案 ${escapeHtml(shortId(result.resultId))}">删除</button>
               </div>
             </td>
           </tr>
@@ -744,18 +744,18 @@
     state.activeResultId = resultId;
     setDetailStatus("");
     el.detailDelete.disabled = false;
-    el.detailDelete.textContent = "删除此答卷";
-    el.detailTitle.textContent = `答卷 ${shortId(result.resultId)}`;
+    el.detailDelete.textContent = "删除此档案";
+    el.detailTitle.textContent = `样本档案 ${shortId(result.resultId)}`;
     el.detailSubtitle.textContent = `${formatDateTime(result.createdAt)} · ${result.testVersion}`;
     el.detailMeta.innerHTML = [
-      ["提交时间", formatDateTime(result.createdAt)],
-      ["完成时间", formatDateTime(result.completedAt)],
-      ["测试版本", result.testVersion],
-      ["耗时", formatDuration(result.durationMs)],
-      ["重点题", `${formatNumber(result.importanceCount)} 道`],
-      ["同意书版本", result.consentVersion],
-      ["匿名设备", result.clientId],
-      ["结果 ID", result.resultId],
+      ["回传时间", formatDateTime(result.createdAt)],
+      ["归档时间", formatDateTime(result.completedAt)],
+      ["样本批次", result.testVersion],
+      ["用时", formatDuration(result.durationMs)],
+      ["重点议题", `${formatNumber(result.importanceCount)} 道`],
+      ["授权版本", result.consentVersion],
+      ["匿名终端", result.clientId],
+      ["档案编号", result.resultId],
     ]
       .map(
         ([label, value]) => `
@@ -822,7 +822,7 @@
       ? `${shortId(result.resultId)}（${formatDateTime(result.createdAt)}）`
       : shortId(resultId);
     const confirmed = window.confirm(
-      `确定永久删除答卷 ${label} 吗？\n\n删除后无法恢复，后台统计会立即重新计算。`
+      `确定永久删除样本档案 ${label} 吗？\n\n删除后无法恢复，战情统计会立即重新计算。`
     );
     if (!confirmed) {
       return;
@@ -830,7 +830,7 @@
 
     state.deleting = true;
     setDeleteBusy(true);
-    setDeleteFeedback("正在删除答卷…");
+    setDeleteFeedback("正在删除样本档案…");
 
     try {
       const response = await fetch(
@@ -844,7 +844,7 @@
       );
 
       if (response.status === 401) {
-        handleUnauthorized("管理令牌无效或已过期，请重新输入。");
+        handleUnauthorized("通行密钥无效或已过期，请重新核验。");
         return;
       }
 
@@ -862,7 +862,7 @@
       closeDetail({ restoreFocus: false });
       const refreshed = await loadDashboard();
       if (refreshed) {
-        setAppStatus("答卷已删除，统计已重新计算。", "success");
+        setAppStatus("样本档案已删除，战情统计已重新计算。", "success");
       }
     } catch (error) {
       setDeleteFeedback(`删除失败：${error.message}`, "error");
@@ -885,7 +885,7 @@
         cache: "no-store",
       });
       if (response.status === 401) {
-        handleUnauthorized("管理令牌无效或已过期，请重新输入。");
+        handleUnauthorized("通行密钥无效或已过期，请重新核验。");
         return;
       }
       if (!response.ok) {
@@ -940,7 +940,7 @@
       event.preventDefault();
       const token = el.tokenInput.value.trim();
       if (!token) {
-        setLoginStatus("请输入管理令牌。", "error");
+        setLoginStatus("请输入委员会通行密钥。", "error");
         el.tokenInput.focus();
         return;
       }
@@ -969,7 +969,7 @@
       state.data = null;
       closeDetail({ restoreFocus: false });
       el.tokenInput.value = "";
-      showLoginView("已退出管理后台。", "success");
+      showLoginView("已退出数据作战室。", "success");
       setBusy(false);
     });
 
