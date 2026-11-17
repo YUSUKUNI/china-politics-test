@@ -327,6 +327,9 @@
   }
 
   function formatDuration(value) {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
     const ms = Number(value);
     if (!Number.isFinite(ms) || ms < 0) {
       return "—";
