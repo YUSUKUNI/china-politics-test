@@ -1,5 +1,7 @@
 import questionnaire from "../questionnaire.js";
+import survey30 from "../questionnaire30.js";
 import resultUtils from "../shared/results.js";
+import survey30Stats from "../shared/survey30.js";
 
 const {
   MAX_BODY_BYTES,
@@ -9,9 +11,13 @@ const {
   validateResultPayload,
   buildCsvHeader,
   buildCsvRecord,
+  validateSurvey30Payload,
+  buildSurvey30CsvHeader,
+  buildSurvey30CsvRecord,
 } = resultUtils;
 
 const TEST_VERSION = questionnaire.meta.testVersion;
+const SURVEY30_VERSION = survey30.meta.surveyVersion;
 const PAGE_SIZE = 500;
 const DASHBOARD_DEFAULT_PAGE_SIZE = 20;
 const DASHBOARD_MAX_PAGE_SIZE = 100;
@@ -53,6 +59,38 @@ const SELECT_RESULTS_PAGE_SQL = `
   ORDER BY id
   LIMIT ? OFFSET ?
 `;
+const INSERT_SURVEY30_RESULT_SQL = `
+  INSERT INTO survey30_results (
+    result_id,
+    client_id,
+    survey_version,
+    consent_version,
+    started_at,
+    completed_at,
+    duration_ms,
+    answers_json
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
+const SELECT_SURVEY30_BY_CLIENT_SQL = `
+  SELECT created_at
+  FROM survey30_results
+  WHERE client_id = ? AND survey_version = ?
+`;
+const SELECT_SURVEY30_PAGE_SQL = `
+  SELECT
+    result_id,
+    client_id,
+    survey_version,
+    consent_version,
+    started_at,
+    completed_at,
+    duration_ms,
+    answers_json,
+    created_at
+  FROM survey30_results
+  ORDER BY id
+  LIMIT ? OFFSET ?
+`;
 
 export default {
   async fetch(request, env) {
@@ -78,6 +116,14 @@ export default {
         response = await handleResults(request, env, allowedOrigin);
       } else if (url.pathname === "/api/client-status") {
         response = await handleClientStatus(request, env, allowedOrigin);
+      } else if (url.pathname === "/api/survey30/results") {
+        response = await handleSurvey30Results(request, env, allowedOrigin);
+      } else if (url.pathname === "/api/survey30/client-status") {
+        response = await handleSurvey30ClientStatus(request, env, allowedOrigin);
+      } else if (url.pathname === "/api/survey30/stats") {
+        response = await handleSurvey30Stats(request, env, allowedOrigin);
+      } else if (url.pathname === "/api/admin/survey30/results.csv") {
+        response = await handleSurvey30Csv(request, env, allowedOrigin);
       } else if (url.pathname === "/api/admin/results") {
         response = await handleAdminDashboard(request, env, allowedOrigin, url);
       } else if (/^\/api\/admin\/results\/[^/]+$/.test(url.pathname)) {
@@ -221,6 +267,215 @@ async function handleClientStatus(request, env, allowedOrigin) {
   );
 }
 
+async function handleSurvey30Results(request, env, allowedOrigin) {
+  if (request.method !== "POST") {
+    return methodNotAllowed("POST", allowedOrigin);
+  }
+
+  const clientId = getClientId(request);
+  if (!clientId) {
+    throw new HttpError(
+      400,
+      "missing_client_id",
+      "匿名客户端标识缺失，请刷新页面后重试。"
+    );
+  }
+
+  const contentType = String(request.headers.get("Content-Type") || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (contentType !== "application/json") {
+    throw new HttpError(415, "invalid_content_type", "请求必须使用 JSON。");
+  }
+
+  const contentLength = Number(request.headers.get("Content-Length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    throw new HttpError(413, "payload_too_large", "提交内容过大。");
+  }
+
+  const rawBody = await request.text();
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+    throw new HttpError(413, "payload_too_large", "提交内容过大。");
+  }
+  if (!rawBody.trim()) {
+    throw new HttpError(400, "empty_body", "提交内容为空。");
+  }
+
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    throw new HttpError(400, "invalid_json", "JSON 格式不正确。");
+  }
+
+  const payload = validateSurvey30Payload(body, survey30);
+  const resultId = crypto.randomUUID();
+
+  try {
+    await env.DB.prepare(INSERT_SURVEY30_RESULT_SQL)
+      .bind(
+        resultId,
+        clientId,
+        SURVEY30_VERSION,
+        survey30.meta.consentVersion,
+        payload.startedAt,
+        payload.completedAt,
+        payload.durationMs,
+        JSON.stringify(payload.answers)
+      )
+      .run();
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return jsonResponse(
+        409,
+        {
+          error: "duplicate_submission",
+          message: "该设备已提交过本版调查，本次不会重复保存。",
+        },
+        allowedOrigin
+      );
+    }
+    throw error;
+  }
+
+  console.log(`Stored anonymous survey30 result ${resultId}`);
+  return jsonResponse(
+    201,
+    {
+      ok: true,
+      resultId,
+      surveyVersion: SURVEY30_VERSION,
+      message: "答卷已匿名保存。",
+    },
+    allowedOrigin
+  );
+}
+
+async function handleSurvey30ClientStatus(request, env, allowedOrigin) {
+  if (request.method !== "GET") {
+    return methodNotAllowed("GET", allowedOrigin);
+  }
+
+  const clientId = getClientId(request);
+  if (!clientId) {
+    throw new HttpError(
+      400,
+      "missing_client_id",
+      "匿名客户端标识缺失，请刷新页面后重试。"
+    );
+  }
+
+  const existing = await env.DB.prepare(SELECT_SURVEY30_BY_CLIENT_SQL)
+    .bind(clientId, SURVEY30_VERSION)
+    .first();
+
+  return jsonResponse(
+    200,
+    {
+      submitted: Boolean(existing),
+      completedAt: existing ? existing.created_at : null,
+      surveyVersion: SURVEY30_VERSION,
+    },
+    allowedOrigin
+  );
+}
+
+async function handleSurvey30Stats(request, env, allowedOrigin) {
+  if (request.method !== "GET") {
+    return methodNotAllowed("GET", allowedOrigin);
+  }
+
+  const summaryPromise = env.DB.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      COUNT(DISTINCT client_id) AS unique_clients,
+      AVG(duration_ms) AS average_duration_ms,
+      MAX(created_at) AS last_submitted_at
+    FROM survey30_results
+    WHERE survey_version = ?
+  `).bind(SURVEY30_VERSION).first();
+
+  const todayPromise = env.DB.prepare(`
+    SELECT COUNT(*) AS today_count
+    FROM survey30_results
+    WHERE survey_version = ?
+      AND date(created_at, '+8 hours') = date('now', '+8 hours')
+  `).bind(SURVEY30_VERSION).first();
+
+  const questionCountsPromise = env.DB.prepare(`
+    SELECT
+      CAST(j.key AS INTEGER) AS question_index,
+      CAST(j.value AS INTEGER) AS answer_index,
+      COUNT(*) AS count
+    FROM survey30_results r, json_each(r.answers_json) AS j
+    WHERE r.survey_version = ?
+    GROUP BY CAST(j.key AS INTEGER), CAST(j.value AS INTEGER)
+    ORDER BY question_index ASC, answer_index ASC
+  `).bind(SURVEY30_VERSION).all();
+
+  const dailyPromise = env.DB.prepare(`
+    SELECT date(created_at, '+8 hours') AS day, COUNT(*) AS count
+    FROM survey30_results
+    WHERE survey_version = ?
+    GROUP BY date(created_at, '+8 hours')
+    ORDER BY day DESC
+    LIMIT 30
+  `).bind(SURVEY30_VERSION).all();
+
+  const [summary, today, questionCountRows, dailyRows] = await Promise.all([
+    summaryPromise,
+    todayPromise,
+    questionCountsPromise,
+    dailyPromise,
+  ]);
+
+  const questionCounts = survey30Stats.createEmptyQuestionCounts(survey30);
+  (questionCountRows.results || []).forEach((row) => {
+    survey30Stats.addCount(
+      questionCounts,
+      Number(row.question_index),
+      Number(row.answer_index),
+      Number(row.count || 0),
+      survey30
+    );
+  });
+  const aggregated = survey30Stats.summarizeQuestionCounts(questionCounts, survey30);
+
+  return jsonResponse(
+    200,
+    {
+      generatedAt: new Date().toISOString(),
+      survey: {
+        title: survey30.meta.title,
+        edition: survey30.meta.edition,
+        version: SURVEY30_VERSION,
+        consentVersion: survey30.meta.consentVersion,
+      },
+      summary: {
+        total: Number(summary?.total || 0),
+        uniqueClients: Number(summary?.unique_clients || 0),
+        todayCount: Number(today?.today_count || 0),
+        averageDurationMs: summary?.average_duration_ms ?? null,
+        lastSubmittedAt: summary?.last_submitted_at ?? null,
+      },
+      options: survey30.options.map((option, index) => ({
+        index,
+        label: option.label,
+        value: option.value,
+        uncertain: Boolean(option.uncertain),
+      })),
+      overview: aggregated.overall,
+      questions: aggregated.questions,
+      daily: (dailyRows.results || []).slice().reverse().map((row) => ({
+        date: row.day,
+        count: Number(row.count || 0),
+      })),
+    },
+    allowedOrigin
+  );
+}
+
 async function handleAdminDashboard(request, env, allowedOrigin, url) {
   if (request.method !== "GET") {
     return methodNotAllowed("GET", allowedOrigin);
@@ -298,6 +553,43 @@ async function handleAdminCsv(request, env, allowedOrigin) {
   }
 
   const filename = `china-politics-results-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
+  return new Response(`${CSV_BOM}${csv}`, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+async function handleSurvey30Csv(request, env, allowedOrigin) {
+  if (request.method !== "GET") {
+    return methodNotAllowed("GET", allowedOrigin);
+  }
+
+  await assertAdminAccess(request, env);
+
+  let offset = 0;
+  let csv = `${buildSurvey30CsvHeader(survey30)}\r\n`;
+
+  while (true) {
+    const page = await env.DB.prepare(SELECT_SURVEY30_PAGE_SQL)
+      .bind(PAGE_SIZE, offset)
+      .all();
+    const rows = Array.isArray(page.results) ? page.results : [];
+    rows.forEach((row) => {
+      csv += `${buildSurvey30CsvRecord(row, survey30)}\r\n`;
+    });
+    if (rows.length < PAGE_SIZE) {
+      break;
+    }
+    offset += rows.length;
+  }
+
+  const filename = `socioeconomic-survey30-${new Date()
     .toISOString()
     .slice(0, 10)}.csv`;
   return new Response(`${CSV_BOM}${csv}`, {

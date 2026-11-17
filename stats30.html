@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>汇总统计 · 中国居民社会经济与公共政策态度调查</title>
+<link rel="stylesheet" href="stats30.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html" aria-label="返回首页">
+    <span class="brand-mark">统</span>
+    <span>
+      <strong>公共态度调查</strong>
+      <small>匿名汇总统计</small>
+    </span>
+  </a>
+  <nav class="header-nav" aria-label="页面导航">
+    <a class="nav-link" href="survey30.html">参与调查</a>
+    <button id="refresh-button" class="nav-button" type="button">刷新数据</button>
+  </nav>
+</header>
+
+<main class="page-shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">PUBLIC AGGREGATE DASHBOARD</p>
+      <h1>中国居民社会经济与<br>公共政策态度调查</h1>
+      <p class="hero-copy">30 题匿名版 · 逐题汇总分布。这里只展示聚合结果，不展示任何单份答卷或设备标识。</p>
+    </div>
+    <div class="hero-side">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span id="last-updated">正在读取数据…</span>
+    </div>
+  </section>
+
+  <div id="error-banner" class="error-banner" role="alert" hidden></div>
+
+  <section id="metric-grid" class="metric-grid" aria-label="参与概况">
+    <article class="metric-card placeholder"><span>样本数</span><strong>—</strong><small>正在加载</small></article>
+    <article class="metric-card placeholder"><span>今日新增</span><strong>—</strong><small>正在加载</small></article>
+    <article class="metric-card placeholder"><span>平均用时</span><strong>—</strong><small>正在加载</small></article>
+    <article class="metric-card placeholder"><span>最近提交</span><strong>—</strong><small>正在加载</small></article>
+  </section>
+
+  <section class="panel overview-panel" aria-labelledby="overview-title">
+    <header class="panel-heading">
+      <div>
+        <p class="section-kicker">OVERALL DISTRIBUTION</p>
+        <h2 id="overview-title">整体作答分布</h2>
+        <p>把全部有效答卷的 30 个回答合并统计。</p>
+      </div>
+      <span id="answer-count" class="count-badge">0 个回答</span>
+    </header>
+    <div id="overview-bar" class="stacked-bar overview-bar" aria-label="整体回答分布"></div>
+    <div id="overview-legend" class="overview-legend"></div>
+  </section>
+
+  <section class="questions-section" aria-labelledby="questions-title">
+    <header class="questions-heading">
+      <div>
+        <p class="section-kicker">QUESTION-BY-QUESTION</p>
+        <h2 id="questions-title">逐题结果</h2>
+        <p>“支持”合并非常支持与比较支持；“反对”合并比较反对与非常反对。“不确定 / 不愿回答”单独列出。</p>
+      </div>
+      <div class="controls">
+        <label class="control-field">
+          <span>筛选</span>
+          <input id="search-input" type="search" placeholder="搜索题目关键词" autocomplete="off">
+        </label>
+        <label class="control-field">
+          <span>排序</span>
+          <select id="sort-select">
+            <option value="number">题号顺序</option>
+            <option value="support">支持率从高到低</option>
+            <option value="oppose">反对率从高到低</option>
+            <option value="uncertain">不确定比例从高到低</option>
+            <option value="division">分歧程度从高到低</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <p id="list-summary" class="list-summary" role="status" aria-live="polite"></p>
+    <div id="question-list" class="question-list"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <strong>还没有可展示的答卷</strong>
+      <p>完成第一份匿名调查后，这里会自动出现汇总结果。</p>
+      <a class="button primary" href="survey30.html">参与调查</a>
+    </div>
+  </section>
+
+  <section class="method-note">
+    <h2>阅读说明</h2>
+    <p>本页样本来自自愿参与，并非随机抽样，不能直接代表总体人口。百分比按每道题的全部回答计算；净支持指数仅使用明确支持、中立和反对的回答，取值范围为 −100 到 +100。</p>
+    <p>页面不显示匿名设备 ID、单份答卷、时间戳明细或其他可用于识别个人的数据。</p>
+  </section>
+
+  <footer class="page-footer">
+    <span>数据仅作匿名汇总展示</span>
+    <a href="survey30.html">返回调查</a>
+  </footer>
+</main>
+
+<script src="api-config.js"></script>
+<script src="stats30.js"></script>
+</body>
+</html>

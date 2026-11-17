@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>中国居民社会经济与公共政策态度调查（30题版）</title>
+<link rel="stylesheet" href="survey30.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html" aria-label="返回首页">
+    <span class="brand-mark">调</span>
+    <span>
+      <strong>公共态度调查</strong>
+      <small>30 题匿名版</small>
+    </span>
+  </a>
+  <nav class="header-nav" aria-label="页面导航">
+    <a class="nav-link" href="stats30.html">查看汇总统计</a>
+  </nav>
+</header>
+
+<main class="page-shell">
+  <section id="intro-view" class="card intro-card" aria-labelledby="intro-title">
+    <p class="eyebrow">ANONYMOUS PUBLIC OPINION SURVEY</p>
+    <h1 id="intro-title">中国居民社会经济与公共政策态度调查</h1>
+    <p class="subtitle">30 题匿名版 · 关于经济、社会与公共治理议题的意见调查</p>
+
+    <div class="meta-grid" aria-label="调查信息">
+      <div><strong>30</strong><span>道题目</span></div>
+      <div><strong>约 6–8</strong><span>分钟</span></div>
+      <div><strong>匿名</strong><span>不收集身份信息</span></div>
+    </div>
+
+    <div class="notice">
+      <h2>作答说明</h2>
+      <p>每题请选择最接近你当前看法的一项，没有标准答案。无法判断或不愿回答时，可选择“不确定 / 不愿回答”。</p>
+      <p>提交后，答案会以匿名形式保存，并计入公开汇总统计。页面不会公开任何单份答卷、设备标识或联系方式。</p>
+    </div>
+
+    <label class="consent-row" for="consent-checkbox">
+      <input id="consent-checkbox" type="checkbox">
+      <span>我已阅读说明，同意匿名提交本次作答结果用于汇总统计。</span>
+    </label>
+
+    <p id="client-status" class="client-status" role="status" aria-live="polite"></p>
+    <button id="start-button" class="button primary" type="button" disabled>开始作答</button>
+    <p class="fine-print">同一浏览器对同一版本只能成功提交一次。汇总页不展示设备标识和逐份答卷。</p>
+  </section>
+
+  <section id="question-view" class="card question-card" hidden aria-labelledby="question-title">
+    <div class="progress-head">
+      <span id="progress-label">第 1 / 30 题</span>
+      <span id="progress-percent">0%</span>
+    </div>
+    <div class="progress-track" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
+
+    <p class="question-index" id="question-index">问题 01</p>
+    <h1 id="question-title" class="question-title" tabindex="-1"></h1>
+    <div id="option-list" class="option-list" role="radiogroup" aria-labelledby="question-title"></div>
+    <p id="question-status" class="inline-status" role="status" aria-live="polite"></p>
+
+    <div class="question-actions">
+      <button id="back-button" class="button secondary" type="button">上一题</button>
+      <button id="next-button" class="button primary" type="button">下一题</button>
+    </div>
+  </section>
+
+  <section id="complete-view" class="card complete-card" hidden aria-labelledby="complete-title">
+    <div class="complete-mark" aria-hidden="true">✓</div>
+    <p class="eyebrow">SUBMISSION COMPLETE</p>
+    <h1 id="complete-title" tabindex="-1">本次作答已提交</h1>
+    <p id="complete-message" class="subtitle">感谢参与。你的答案已以匿名形式保存，并计入汇总统计。</p>
+    <div class="complete-actions">
+      <a class="button primary" href="stats30.html">查看汇总统计</a>
+      <a class="button secondary" href="index.html">返回首页</a>
+    </div>
+  </section>
+
+  <footer class="page-footer">
+    <span>匿名调查 · 仅作公众意见汇总</span>
+    <a href="stats30.html">汇总统计</a>
+  </footer>
+</main>
+
+<script src="api-config.js"></script>
+<script src="questionnaire30.js"></script>
+<script src="survey30.js"></script>
+</body>
+</html>

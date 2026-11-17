@@ -208,6 +208,107 @@
     return `${CSV_BOM}${lines.join("\r\n")}\r\n`;
   }
 
+  function validateSurvey30Payload(body, survey) {
+    if (!survey || !survey.meta || !Array.isArray(survey.questions)) {
+      throw new TypeError("A complete survey is required.");
+    }
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new HttpError(400, "invalid_payload", "提交内容格式不正确。");
+    }
+
+    const { meta, options, questions } = survey;
+
+    if (body.surveyVersion !== meta.surveyVersion) {
+      throw new HttpError(400, "version_mismatch", "调查版本不匹配，请刷新后重试。");
+    }
+    if (body.consent !== true || body.consentVersion !== meta.consentVersion) {
+      throw new HttpError(400, "consent_required", "提交前必须同意匿名数据说明。");
+    }
+    if (
+      !Array.isArray(body.answers) ||
+      body.answers.length !== questions.length ||
+      body.answers.some(
+        (answer) =>
+          !Number.isInteger(answer) || answer < 0 || answer >= options.length
+      )
+    ) {
+      throw new HttpError(400, "invalid_answers", "答题数据不完整或格式不正确。");
+    }
+
+    const startedAt = parseTimestamp(body.startedAt, "startedAt");
+    const completedAt = parseTimestamp(body.completedAt, "completedAt");
+    const elapsedMs = Date.parse(completedAt) - Date.parse(startedAt);
+    if (elapsedMs < 0 || elapsedMs > MAX_TEST_DURATION_MS) {
+      throw new HttpError(
+        400,
+        "invalid_timestamp",
+        "结束时间必须晚于开始时间，且作答时长不能超过七天。"
+      );
+    }
+
+    const durationMs = Number(body.durationMs);
+    if (
+      !Number.isFinite(durationMs) ||
+      durationMs < 0 ||
+      durationMs > MAX_TEST_DURATION_MS
+    ) {
+      throw new HttpError(400, "invalid_duration", "作答时长格式不正确。");
+    }
+
+    return {
+      surveyVersion: meta.surveyVersion,
+      consentVersion: meta.consentVersion,
+      answers: body.answers.slice(),
+      startedAt,
+      completedAt,
+      durationMs: Math.round(durationMs),
+    };
+  }
+
+  function buildSurvey30CsvHeader(survey) {
+    const headers = [
+      "result_id",
+      "client_id",
+      "survey_version",
+      "consent_version",
+      "started_at",
+      "completed_at",
+      "duration_ms",
+      "created_at",
+    ];
+    survey.questions.forEach((_question, index) => {
+      headers.push(`q${String(index + 1).padStart(2, "0")}`);
+    });
+    return headers.join(",");
+  }
+
+  function buildSurvey30CsvRecord(record, survey) {
+    const answers = parseStoredJson(record.answers_json, []);
+    const fields = [
+      record.result_id,
+      record.client_id,
+      record.survey_version,
+      record.consent_version,
+      record.started_at,
+      record.completed_at,
+      record.duration_ms,
+      record.created_at,
+    ];
+    survey.questions.forEach((_question, index) => {
+      fields.push(Number.isInteger(answers[index]) ? answers[index] : "");
+    });
+    return fields.map(csvCell).join(",");
+  }
+
+  function buildSurvey30CsvDocument(records, survey) {
+    const lines = [buildSurvey30CsvHeader(survey)];
+    records.forEach((record) => {
+      lines.push(buildSurvey30CsvRecord(record, survey));
+    });
+    return `${CSV_BOM}${lines.join("\r\n")}\r\n`;
+  }
+
   return {
     MAX_BODY_BYTES,
     MAX_TEST_DURATION_MS,
@@ -218,5 +319,9 @@
     buildCsvHeader,
     buildCsvRecord,
     buildCsvDocument,
+    validateSurvey30Payload,
+    buildSurvey30CsvHeader,
+    buildSurvey30CsvRecord,
+    buildSurvey30CsvDocument,
   };
 });

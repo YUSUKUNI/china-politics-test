@@ -16,7 +16,12 @@
 
 - 测试页面：`https://yusukuni.github.io/china-politics-test/`
 - 管理后台：`https://yusukuni.github.io/china-politics-test/admin.html`
+- 30 题匿名调查：`https://yusukuni.github.io/china-politics-test/survey30.html`
+- 30 题汇总统计：`https://yusukuni.github.io/china-politics-test/stats30.html`
+- 30 题脱敏 TXT：`https://yusukuni.github.io/china-politics-test/docs/public-questionnaire-30-questions.txt`
 - 数据接口：`https://china-politics-test-data.pages.dev`
+
+30 题调查是一套独立问卷，使用 `questionnaire30.js` 作为唯一题库源，数据写入 D1 的 `survey30_results` 表。它不参与原 60 题八轴计分，也不会和原测试结果混算。公开统计页只展示逐题聚合分布，不展示匿名设备 ID 或单份答卷；完整 CSV 仍通过管理令牌保护。
 
 当前网络下 `pages.dev` 可正常访问，而 `workers.dev` 会被拦截，因此线上正式数据入口使用 Pages。若以后有正式域名，只需更新 `ALLOWED_ORIGINS` 和 `api-config.js`。
 
@@ -82,7 +87,7 @@ npx wrangler d1 create china-politics-test-results
 npm run db:migrate:remote
 ```
 
-已有 D1 数据库必须在部署新版服务端前执行 migration；`0002` 会新增 `importance_json` 字段。
+已有 D1 数据库必须在部署新版服务端前执行 migration；`0002` 会新增 `importance_json` 字段，`0003` 会新增独立的 `survey30_results` 表。
 
 5. 首次部署时创建 Pages 项目：
 
